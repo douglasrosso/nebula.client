@@ -36,11 +36,7 @@ interface StoreState {
   loadCurrentUser: () => Promise<void>;
   updateProfile: (data: Partial<ApiUser>) => Promise<void>;
 
-  // ── Login Modal (global) ──────────────────────────────────────────────────
-  loginModalOpen: boolean;
-  setLoginModalOpen: (open: boolean) => void;
-  pendingAction: (() => void) | null;
-  /** Abre modal de login se não logado e registra ação pendente. Retorna true se já logado. */
+  /** Redireciona para /login se não autenticado. Retorna true se já logado. */
   requireLogin: (action?: () => void) => boolean;
 
   // ── Games (cache) ─────────────────────────────────────────────────────────
@@ -100,14 +96,8 @@ export const useStore = create<StoreState>()(
         try {
           await authApi.login({ email, password });
           const user = await usersApi.me();
-          set({ user, isLoggedIn: true, loginModalOpen: false });
+          set({ user, isLoggedIn: true });
           await Promise.all([get().loadCart(), get().loadWishlist(), get().loadLibrary()]);
-          // Executa ação pendente após login bem-sucedido
-          const pending = get().pendingAction;
-          if (pending) {
-            set({ pendingAction: null });
-            pending();
-          }
         } finally {
           set({ authLoading: false });
         }
@@ -139,21 +129,12 @@ export const useStore = create<StoreState>()(
         }
       },
 
-      // ── Login Modal ──────────────────────────────────────────────────────────
-      loginModalOpen: false,
-      pendingAction: null,
-
-      setLoginModalOpen: (open) => {
-        set({ loginModalOpen: open });
-        if (!open) set({ pendingAction: null });
-      },
-
       requireLogin: (action) => {
         if (get().isLoggedIn) {
           action?.();
           return true;
         }
-        set({ loginModalOpen: true, pendingAction: action ?? null });
+        window.location.href = "/login";
         return false;
       },
 

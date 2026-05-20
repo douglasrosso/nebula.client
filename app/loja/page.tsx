@@ -1,29 +1,12 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import { useStore } from "@/lib/store";
 import { useGames } from "@/lib/hooks/useGames";
 import { GameCard } from "@/components/game-card";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
-import { Checkbox } from "@/components/ui/checkbox";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-  SheetTrigger,
-} from "@/components/ui/sheet";
 import { Slider } from "@/components/ui/slider";
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { Search, SlidersHorizontal, X, Loader2 } from "lucide-react";
 import { gamesApi } from "@/lib/api";
 
@@ -32,252 +15,180 @@ const DEFAULT_GENRES = [
   "Estratégia", "Corrida", "Simulador", "Sandbox", "Indie", "Esportes",
 ];
 
-export default function StorePage() {
-  const searchParams = useSearchParams();
-  const {
-    searchQuery,
-    setSearchQuery,
-    selectedGenres,
-    setSelectedGenres,
-    priceRange,
-    setPriceRange,
-    sortBy,
-    setSortBy,
-    getFilteredGames,
-  } = useStore();
+const SORT_OPTIONS = [
+  { value: "relevance", label: "Relevância" },
+  { value: "price-low", label: "Menor preço" },
+  { value: "price-high", label: "Maior preço" },
+  { value: "name", label: "Nome A-Z" },
+  { value: "rating", label: "Melhor avaliação" },
+] as const;
 
+function StoreContent() {
+  const searchParams = useSearchParams();
+  const { searchQuery, setSearchQuery, selectedGenres, setSelectedGenres, priceRange, setPriceRange, sortBy, setSortBy, getFilteredGames } = useStore();
   const [localSearch, setLocalSearch] = useState(searchQuery);
   const [apiGenres, setApiGenres] = useState<string[]>(DEFAULT_GENRES);
-
-  // Load all games into the store
   const { loading } = useGames({ pageSize: 200 });
-
   const filteredGames = getFilteredGames();
 
-  // Apply URL query params on mount
   useEffect(() => {
     const genre = searchParams.get("genre");
-    if (genre && !selectedGenres.includes(genre)) {
-      setSelectedGenres([genre]);
-    }
+    if (genre && !selectedGenres.includes(genre)) setSelectedGenres([genre]);
   }, []);
 
-  // Load genres from API
   useEffect(() => {
-    gamesApi.genres().then((genres) => {
-      if (genres.length > 0) setApiGenres(genres.map((g) => g.name));
-    }).catch(() => {});
+    gamesApi.genres().then((gs) => { if (gs.length > 0) setApiGenres(gs.map((g) => g.name)); }).catch(() => {});
   }, []);
 
-  const handleSearch = (e: React.FormEvent) => {
-    e.preventDefault();
-    setSearchQuery(localSearch);
-  };
-
-  const toggleGenre = (genre: string) => {
-    if (selectedGenres.includes(genre)) {
-      setSelectedGenres(selectedGenres.filter((g) => g !== genre));
-    } else {
-      setSelectedGenres([...selectedGenres, genre]);
-    }
-  };
-
-  const clearFilters = () => {
-    setSearchQuery("");
-    setLocalSearch("");
-    setSelectedGenres([]);
-    setPriceRange([0, 500]);
-    setSortBy("relevance");
-  };
-
-  const hasActiveFilters =
-    searchQuery !== "" ||
-    selectedGenres.length > 0 ||
-    priceRange[0] > 0 ||
-    priceRange[1] < 500;
+  const handleSearch = (e: React.SyntheticEvent<HTMLFormElement>) => { e.preventDefault(); setSearchQuery(localSearch); };
+  const toggleGenre = (genre: string) => setSelectedGenres(selectedGenres.includes(genre) ? selectedGenres.filter((g) => g !== genre) : [...selectedGenres, genre]);
+  const clearFilters = () => { setSearchQuery(""); setLocalSearch(""); setSelectedGenres([]); setPriceRange([0, 500]); setSortBy("relevance"); };
+  const hasActiveFilters = searchQuery !== "" || selectedGenres.length > 0 || priceRange[0] > 0 || priceRange[1] < 500;
 
   const FiltersContent = () => (
-    <div className="space-y-6">
+    <div className="space-y-7">
       <div>
-        <h3 className="font-semibold mb-4">Faixa de Preço</h3>
-        <div className="px-2">
-          <Slider
-            value={priceRange}
-            onValueChange={(value) => setPriceRange(value as [number, number])}
-            max={500}
-            step={10}
-            className="mb-4"
-          />
-          <div className="flex items-center justify-between text-sm text-muted-foreground">
-            <span>R$ {priceRange[0]}</span>
-            <span>R$ {priceRange[1]}</span>
-          </div>
+        <p className="text-[11px] font-semibold uppercase tracking-wider mb-3 text-muted-foreground">Ordenar</p>
+        <div className="space-y-0.5">
+          {SORT_OPTIONS.map((opt) => (
+            <button
+              key={opt.value}
+              onClick={() => setSortBy(opt.value as typeof sortBy)}
+              className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-[14px] transition-colors ${sortBy === opt.value ? "bg-primary/12 text-primary" : "text-muted-foreground hover:text-foreground hover:bg-foreground/5"}`}
+            >
+              {opt.label}
+              {sortBy === opt.value && <span className="w-1.5 h-1.5 rounded-full bg-primary" />}
+            </button>
+          ))}
         </div>
       </div>
 
       <div>
-        <h3 className="font-semibold mb-4">Gêneros</h3>
-        <div className="space-y-3">
+        <p className="text-[11px] font-semibold uppercase tracking-wider mb-3 text-muted-foreground">Faixa de Preço</p>
+        <Slider value={priceRange} onValueChange={(v) => setPriceRange(v as [number, number])} max={500} step={10} className="mb-3" />
+        <div className="flex items-center justify-between text-[13px] text-muted-foreground">
+          <span>R$ {priceRange[0]}</span><span>R$ {priceRange[1]}</span>
+        </div>
+      </div>
+
+      <div>
+        <p className="text-[11px] font-semibold uppercase tracking-wider mb-3 text-muted-foreground">Gêneros</p>
+        <div className="flex flex-wrap gap-2">
           {apiGenres.map((genre) => (
-            <label key={genre} className="flex items-center gap-3 cursor-pointer">
-              <Checkbox
-                checked={selectedGenres.includes(genre)}
-                onCheckedChange={() => toggleGenre(genre)}
-                id={`genre-${genre}`}
-              />
-              <span className="text-sm">{genre}</span>
-            </label>
+            <button
+              key={genre}
+              onClick={() => toggleGenre(genre)}
+              className={`px-3 py-1.5 rounded-full text-[12px] font-medium transition-colors ${selectedGenres.includes(genre) ? "bg-primary text-primary-foreground" : "bg-surface-inset text-foreground hover:bg-primary/12 hover:text-primary"}`}
+            >
+              {genre}
+            </button>
           ))}
         </div>
       </div>
 
       {hasActiveFilters && (
-        <Button variant="outline" onClick={clearFilters} className="w-full gap-2">
-          <X className="w-4 h-4" />
+        <button
+          onClick={clearFilters}
+          className="w-full py-2.5 rounded-xl text-[14px] font-medium bg-surface-inset text-destructive hover:opacity-80 transition-opacity"
+        >
           Limpar filtros
-        </Button>
+        </button>
       )}
     </div>
   );
 
   return (
-    <main id="main-content" className="min-h-screen pt-20 lg:pt-24 pb-12">
-      <div className="container mx-auto px-4">
+    <main id="main-content" className="min-h-screen pt-20 pb-16">
+      <div className="container mx-auto px-4 lg:px-6">
         <div className="mb-8">
-          <h1 className="text-3xl font-bold mb-2">Loja</h1>
-          <p className="text-muted-foreground">Descubra sua próxima aventura entre centenas de jogos</p>
+          <h1 className="text-[28px] font-bold tracking-tight text-foreground mb-1">Loja</h1>
+          <p className="text-[15px] text-muted-foreground">Descubra sua próxima aventura</p>
         </div>
 
-        <div className="flex flex-col sm:flex-row gap-4 mb-8">
+        <div className="flex gap-2 mb-6">
           <form onSubmit={handleSearch} className="flex-1 relative">
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
-            <Input
-              type="search"
-              placeholder="Pesquisar jogos..."
-              value={localSearch}
-              onChange={(e) => setLocalSearch(e.target.value)}
-              className="pl-12 h-12 bg-secondary/50 border-glass-border rounded-xl"
+            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+            <input
+              type="search" placeholder="Pesquisar jogos..."
+              value={localSearch} onChange={(e) => setLocalSearch(e.target.value)}
+              className="w-full h-11 pl-10 pr-4 rounded-xl text-[15px] text-foreground bg-surface-raised border border-border outline-none transition-colors placeholder:text-text-tertiary"
               aria-label="Pesquisar jogos"
             />
           </form>
 
-          <div className="flex gap-3">
-            <Select value={sortBy} onValueChange={(value) => setSortBy(value as typeof sortBy)}>
-              <SelectTrigger className="w-48 h-12 bg-secondary/50 border-glass-border rounded-xl">
-                <SelectValue placeholder="Ordenar por" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="relevance">Relevância</SelectItem>
-                <SelectItem value="price-low">Menor preço</SelectItem>
-                <SelectItem value="price-high">Maior preço</SelectItem>
-                <SelectItem value="name">Nome A-Z</SelectItem>
-                <SelectItem value="rating">Melhor avaliação</SelectItem>
-              </SelectContent>
-            </Select>
-
-            <Sheet>
-              <SheetTrigger asChild className="lg:hidden">
-                <Button
-                  variant="outline"
-                  size="icon"
-                  className="h-12 w-12 rounded-xl relative"
-                  aria-label="Abrir filtros"
-                >
-                  <SlidersHorizontal className="w-5 h-5" />
-                  {hasActiveFilters && (
-                    <span className="absolute -top-1 -right-1 w-3 h-3 bg-primary rounded-full" />
-                  )}
-                </Button>
-              </SheetTrigger>
-              <SheetContent side="right" className="glass w-80">
-                <SheetHeader>
-                  <SheetTitle>Filtros</SheetTitle>
-                </SheetHeader>
-                <div className="mt-6">
-                  <FiltersContent />
-                </div>
-              </SheetContent>
-            </Sheet>
-          </div>
+          <Sheet>
+            <SheetTrigger asChild className="lg:hidden">
+              <button
+                className="h-11 px-4 rounded-xl text-[14px] font-medium flex items-center gap-2 relative bg-surface-raised border border-border text-muted-foreground hover:text-foreground transition-colors"
+                aria-label="Abrir filtros"
+              >
+                <SlidersHorizontal className="w-4 h-4" />
+                Filtros
+                {hasActiveFilters && <span className="w-2 h-2 rounded-full bg-primary absolute -top-0.5 -right-0.5" />}
+              </button>
+            </SheetTrigger>
+            <SheetContent side="right" className="w-80 bg-background border-border p-6">
+              <SheetHeader>
+                <SheetTitle className="text-[17px] font-bold text-foreground">Filtros</SheetTitle>
+              </SheetHeader>
+              <div className="mt-6"><FiltersContent /></div>
+            </SheetContent>
+          </Sheet>
         </div>
 
         {hasActiveFilters && (
           <div className="flex flex-wrap gap-2 mb-6">
             {searchQuery && (
-              <Badge
-                variant="secondary"
-                className="gap-2 px-3 py-1.5 cursor-pointer"
-                onClick={() => { setSearchQuery(""); setLocalSearch(""); }}
-              >
-                Busca: {searchQuery}
-                <X className="w-3 h-3" />
-              </Badge>
+              <button onClick={() => { setSearchQuery(""); setLocalSearch(""); }} className="flex items-center gap-1.5 px-3 py-1 rounded-full text-[13px] font-medium bg-primary/12 text-primary">
+                "{searchQuery}" <X className="w-3 h-3" />
+              </button>
             )}
             {selectedGenres.map((genre) => (
-              <Badge
-                key={genre}
-                variant="secondary"
-                className="gap-2 px-3 py-1.5 cursor-pointer"
-                onClick={() => toggleGenre(genre)}
-              >
-                {genre}
-                <X className="w-3 h-3" />
-              </Badge>
+              <button key={genre} onClick={() => toggleGenre(genre)} className="flex items-center gap-1.5 px-3 py-1 rounded-full text-[13px] font-medium bg-primary/12 text-primary">
+                {genre} <X className="w-3 h-3" />
+              </button>
             ))}
-            {(priceRange[0] > 0 || priceRange[1] < 500) && (
-              <Badge
-                variant="secondary"
-                className="gap-2 px-3 py-1.5 cursor-pointer"
-                onClick={() => setPriceRange([0, 500])}
-              >
-                R$ {priceRange[0]} - R$ {priceRange[1]}
-                <X className="w-3 h-3" />
-              </Badge>
-            )}
           </div>
         )}
 
-        <div className="flex gap-8">
-          <aside className="hidden lg:block w-64 flex-shrink-0">
-            <div className="glass rounded-2xl p-6 sticky top-28">
-              <h2 className="font-bold text-lg mb-6">Filtros</h2>
+        <div className="flex gap-6">
+          <aside className="hidden lg:block w-56 flex-shrink-0">
+            <div className="rounded-2xl p-5 sticky top-20 bg-surface-base">
+              <p className="text-[17px] font-bold text-foreground mb-5">Filtros</p>
               <FiltersContent />
             </div>
           </aside>
 
           <div className="flex-1">
-            <div className="flex items-center justify-between mb-4">
-              {loading ? (
-                <div className="flex items-center gap-2 text-muted-foreground">
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                  Carregando jogos...
-                </div>
-              ) : (
-                <p className="text-muted-foreground">
-                  {filteredGames.length} jogo{filteredGames.length !== 1 ? "s" : ""} encontrado{filteredGames.length !== 1 ? "s" : ""}
-                </p>
-              )}
+            <div className="mb-4 text-[13px] text-muted-foreground">
+              {loading
+                ? <span className="flex items-center gap-2"><Loader2 className="w-3.5 h-3.5 animate-spin" /> Carregando...</span>
+                : `${filteredGames.length} jogo${filteredGames.length !== 1 ? "s" : ""}`
+              }
             </div>
-
             {!loading && filteredGames.length === 0 ? (
-              <div className="glass rounded-2xl p-12 text-center">
-                <p className="text-muted-foreground mb-4">
-                  Nenhum jogo encontrado com os filtros selecionados.
-                </p>
-                <Button variant="outline" onClick={clearFilters}>
+              <div className="rounded-2xl p-12 text-center bg-surface-raised">
+                <p className="text-[15px] text-muted-foreground mb-4">Nenhum jogo encontrado com os filtros selecionados.</p>
+                <button onClick={clearFilters} className="px-5 py-2 rounded-xl text-[14px] font-semibold bg-surface-inset text-foreground hover:opacity-80 transition-opacity">
                   Limpar filtros
-                </Button>
+                </button>
               </div>
             ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
-                {filteredGames.map((game) => (
-                  <GameCard key={game.id} game={game} />
-                ))}
+              <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3">
+                {filteredGames.map((game) => <GameCard key={game.id} game={game} />)}
               </div>
             )}
           </div>
         </div>
       </div>
     </main>
+  );
+}
+
+export default function StorePage() {
+  return (
+    <Suspense fallback={<main className="min-h-screen pt-20 flex items-center justify-center"><Loader2 className="w-8 h-8 animate-spin text-primary" /></main>}>
+      <StoreContent />
+    </Suspense>
   );
 }
