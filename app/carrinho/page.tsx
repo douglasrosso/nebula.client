@@ -1,8 +1,10 @@
 "use client";
 
+import { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useStore } from "@/lib/store";
+import { ordersApi } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
@@ -13,26 +15,31 @@ import {
   ArrowRight,
   ShieldCheck,
   Tag,
+  Loader2,
 } from "lucide-react";
 
 export default function CartPage() {
-  const { cart, removeFromCart, clearCart, getCartTotal, addToLibrary } = useStore();
+  const { cart, removeFromCart, clearCart, getCartTotal, addToLibrary, requireLogin } = useStore();
+  const [checkingOut, setCheckingOut] = useState(false);
   const total = getCartTotal();
 
   const formatPrice = (price: number) => {
-    return new Intl.NumberFormat("pt-BR", {
-      style: "currency",
-      currency: "BRL",
-    }).format(price);
+    return new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(price);
   };
 
-  const handleCheckout = () => {
-    // Simulate checkout - add all items to library
-    cart.forEach((item) => {
-      addToLibrary(item.game.id);
-    });
-    clearCart();
-    alert("Compra realizada com sucesso! Os jogos foram adicionados à sua biblioteca.");
+  const handleCheckout = async () => {
+    if (!requireLogin(handleCheckout)) return;
+    setCheckingOut(true);
+    try {
+      const order = await ordersApi.checkout();
+      order.items.forEach((item) => addToLibrary(item.gameId));
+      clearCart();
+      alert("Compra realizada com sucesso! Os jogos foram adicionados à sua biblioteca.");
+    } catch (e) {
+      alert(e instanceof Error ? e.message : "Erro ao finalizar compra. Tente novamente.");
+    } finally {
+      setCheckingOut(false);
+    }
   };
 
   if (cart.length === 0) {
@@ -49,8 +56,7 @@ export default function CartPage() {
             </p>
             <Link href="/loja">
               <Button size="lg" className="gap-2">
-                Explorar loja
-                <ArrowRight className="w-4 h-4" />
+                Explorar loja <ArrowRight className="w-4 h-4" />
               </Button>
             </Link>
           </div>
@@ -59,11 +65,9 @@ export default function CartPage() {
     );
   }
 
-  const savings = cart.reduce((total, item) => {
-    if (item.game.originalPrice) {
-      return total + (item.game.originalPrice - item.game.price);
-    }
-    return total;
+  const savings = cart.reduce((acc, item) => {
+    if (item.game.originalPrice) return acc + (item.game.originalPrice - item.game.price);
+    return acc;
   }, 0);
 
   return (
@@ -75,10 +79,7 @@ export default function CartPage() {
           {/* Cart Items */}
           <div className="lg:col-span-2 space-y-4">
             {cart.map((item) => (
-              <article
-                key={item.game.id}
-                className="glass rounded-2xl p-4 flex gap-4"
-              >
+              <article key={item.game.id} className="glass rounded-2xl p-4 flex gap-4">
                 <Link
                   href={`/jogo/${item.game.id}`}
                   className="relative w-32 h-20 md:w-48 md:h-28 rounded-xl overflow-hidden flex-shrink-0"
@@ -95,21 +96,12 @@ export default function CartPage() {
                 <div className="flex-1 flex flex-col">
                   <div className="flex items-start justify-between gap-4">
                     <div>
-                      <Link
-                        href={`/jogo/${item.game.id}`}
-                        className="font-semibold hover:text-primary transition-colors"
-                      >
+                      <Link href={`/jogo/${item.game.id}`} className="font-semibold hover:text-primary transition-colors">
                         {item.game.title}
                       </Link>
                       <div className="flex flex-wrap gap-1 mt-1">
                         {item.game.genres.slice(0, 2).map((genre) => (
-                          <Badge
-                            key={genre}
-                            variant="secondary"
-                            className="text-xs"
-                          >
-                            {genre}
-                          </Badge>
+                          <Badge key={genre} variant="secondary" className="text-xs">{genre}</Badge>
                         ))}
                       </div>
                     </div>
@@ -125,14 +117,10 @@ export default function CartPage() {
                   </div>
 
                   <div className="mt-auto flex items-end justify-between">
-                    <div className="text-sm text-muted-foreground">
-                      {item.game.developer}
-                    </div>
+                    <div className="text-sm text-muted-foreground">{item.game.developer}</div>
                     <div className="text-right">
                       {item.game.discount && (
-                        <Badge className="bg-success/20 text-success text-xs mb-1">
-                          -{item.game.discount}%
-                        </Badge>
+                        <Badge className="bg-success/20 text-success text-xs mb-1">-{item.game.discount}%</Badge>
                       )}
                       <div className="flex items-baseline gap-2">
                         {item.game.originalPrice && (
@@ -140,9 +128,7 @@ export default function CartPage() {
                             {formatPrice(item.game.originalPrice)}
                           </span>
                         )}
-                        <span className="font-bold text-primary">
-                          {formatPrice(item.game.price)}
-                        </span>
+                        <span className="font-bold text-primary">{formatPrice(item.game.price)}</span>
                       </div>
                     </div>
                   </div>
@@ -150,15 +136,13 @@ export default function CartPage() {
               </article>
             ))}
 
-            {/* Clear Cart */}
             <div className="flex justify-end">
               <Button
                 variant="ghost"
-                onClick={clearCart}
+                onClick={() => clearCart()}
                 className="text-muted-foreground hover:text-destructive gap-2"
               >
-                <Trash2 className="w-4 h-4" />
-                Limpar carrinho
+                <Trash2 className="w-4 h-4" /> Limpar carrinho
               </Button>
             </div>
           </div>
@@ -179,8 +163,7 @@ export default function CartPage() {
                 {savings > 0 && (
                   <div className="flex justify-between text-sm text-success">
                     <dt className="flex items-center gap-2">
-                      <Tag className="w-4 h-4" />
-                      Economia
+                      <Tag className="w-4 h-4" /> Economia
                     </dt>
                     <dd>-{formatPrice(savings)}</dd>
                   </div>
@@ -198,8 +181,13 @@ export default function CartPage() {
                 size="lg"
                 className="w-full mt-6 gap-2 h-14 text-lg"
                 onClick={handleCheckout}
+                disabled={checkingOut}
               >
-                <CreditCard className="w-5 h-5" />
+                {checkingOut ? (
+                  <Loader2 className="w-5 h-5 animate-spin" />
+                ) : (
+                  <CreditCard className="w-5 h-5" />
+                )}
                 Finalizar compra
               </Button>
 
@@ -208,11 +196,8 @@ export default function CartPage() {
                 Pagamento seguro e criptografado
               </div>
 
-              {/* Continue Shopping */}
               <Link href="/loja" className="block mt-6">
-                <Button variant="outline" className="w-full">
-                  Continuar comprando
-                </Button>
+                <Button variant="outline" className="w-full">Continuar comprando</Button>
               </Link>
             </div>
           </div>

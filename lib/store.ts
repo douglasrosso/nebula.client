@@ -2,56 +2,80 @@
 
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
-import { games, type Game, type Review } from "./games-data";
+import type { ApiGame, ApiUser, ApiReview } from "./types";
+import { authApi, usersApi, cartApi, wishlistApi, libraryApi, ordersApi } from "./api";
+
+export type { ApiGame as Game };
+
+export interface Review {
+  id: string;
+  gameId: string;
+  userId: string;
+  userName: string;
+  userAvatar: string;
+  rating: "positive" | "negative";
+  hoursPlayed: number;
+  content: string;
+  date: string;
+  helpful: number;
+  funny: number;
+}
 
 interface CartItem {
-  game: Game;
+  game: ApiGame;
   quantity: number;
 }
 
-interface User {
-  id: string;
-  username: string;
-  displayName: string;
-  avatar: string;
-  level: number;
-  xp: number;
-  joinDate: string;
-  country: string;
-  bio: string;
-  friendCount: number;
-  gamesOwned: number;
-  badges: string[];
-}
-
 interface StoreState {
-  user: User | null;
+  // ── Auth ────────────────────────────────────────────────────────────────────
+  user: ApiUser | null;
   isLoggedIn: boolean;
-  login: (user: User) => void;
-  logout: () => void;
-  updateProfile: (data: Partial<User>) => void;
+  authLoading: boolean;
+  login: (email: string, password: string) => Promise<void>;
+  logout: () => Promise<void>;
+  loadCurrentUser: () => Promise<void>;
+  updateProfile: (data: Partial<ApiUser>) => Promise<void>;
 
+  // ── Login Modal (global) ──────────────────────────────────────────────────
+  loginModalOpen: boolean;
+  setLoginModalOpen: (open: boolean) => void;
+  pendingAction: (() => void) | null;
+  /** Abre modal de login se não logado e registra ação pendente. Retorna true se já logado. */
+  requireLogin: (action?: () => void) => boolean;
+
+  // ── Games (cache) ─────────────────────────────────────────────────────────
+  apiGames: ApiGame[];
+  setApiGames: (games: ApiGame[]) => void;
+
+  // ── Cart ──────────────────────────────────────────────────────────────────
   cart: CartItem[];
-  addToCart: (game: Game) => void;
-  removeFromCart: (gameId: string) => void;
-  clearCart: () => void;
+  addToCart: (game: ApiGame) => Promise<void>;
+  removeFromCart: (gameId: string) => Promise<void>;
+  clearCart: () => Promise<void>;
+  loadCart: () => Promise<void>;
   getCartTotal: () => number;
   getCartCount: () => number;
 
+  // ── Library ───────────────────────────────────────────────────────────────
   library: string[];
+  loadLibrary: () => Promise<void>;
   addToLibrary: (gameId: string) => void;
   removeFromLibrary: (gameId: string) => void;
   isInLibrary: (gameId: string) => boolean;
 
+  // ── Wishlist ──────────────────────────────────────────────────────────────
   wishlist: string[];
-  addToWishlist: (gameId: string) => void;
-  removeFromWishlist: (gameId: string) => void;
+  addToWishlist: (gameId: string) => Promise<void>;
+  removeFromWishlist: (gameId: string) => Promise<void>;
+  loadWishlist: () => Promise<void>;
   isInWishlist: (gameId: string) => boolean;
 
+  // ── Reviews ───────────────────────────────────────────────────────────────
   reviews: Review[];
   addReview: (review: Review) => void;
   getGameReviews: (gameId: string) => Review[];
 
+  // ── Filters ───────────────────────────────────────────────────────────────
   searchQuery: string;
   setSearchQuery: (query: string) => void;
   selectedGenres: string[];
@@ -60,158 +84,209 @@ interface StoreState {
   setPriceRange: (range: [number, number]) => void;
   sortBy: "relevance" | "price-low" | "price-high" | "name" | "rating";
   setSortBy: (sort: "relevance" | "price-low" | "price-high" | "name" | "rating") => void;
-
-  getFilteredGames: () => Game[];
+  getFilteredGames: () => ApiGame[];
 }
-
-const defaultUser: User = {
-  id: "1",
-  username: "gamer123",
-  displayName: "Jogador Pro",
-  avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=gamer123",
-  level: 42,
-  xp: 8500,
-  joinDate: "15 de março de 2020",
-  country: "Brasil",
-  bio: "Apaixonado por RPGs e jogos de mundo aberto. Sempre em busca da próxima aventura épica!",
-  friendCount: 156,
-  gamesOwned: 87,
-  badges: ["Colecionador", "Veterano", "Revisor Expert", "Jogador Social"],
-};
-
-const defaultReviews: Review[] = [
-  {
-    id: "r1",
-    gameId: "1",
-    userId: "u1",
-    userName: "DragonSlayer99",
-    userAvatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=dragon",
-    rating: "positive",
-    hoursPlayed: 245,
-    content: "Simplesmente uma obra-prima. O mundo aberto é vasto e cheio de segredos. A dificuldade é desafiadora mas justa. Recomendo fortemente para fãs de RPG.",
-    date: "12 de janeiro de 2024",
-    helpful: 234,
-    funny: 12,
-  },
-  {
-    id: "r2",
-    gameId: "1",
-    userId: "u2",
-    userName: "CasualGamer",
-    userAvatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=casual",
-    rating: "positive",
-    hoursPlayed: 89,
-    content: "Comecei achando difícil demais, mas depois que peguei o jeito, não consegui parar. A exploração é viciante!",
-    date: "5 de fevereiro de 2024",
-    helpful: 156,
-    funny: 8,
-  },
-  {
-    id: "r3",
-    gameId: "1",
-    userId: "u3",
-    userName: "SoulsVeteran",
-    userAvatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=souls",
-    rating: "positive",
-    hoursPlayed: 512,
-    content: "O melhor jogo da FromSoftware até agora. A parceria com George R.R. Martin resultou em um mundo incrível. 10/10",
-    date: "28 de dezembro de 2023",
-    helpful: 445,
-    funny: 23,
-  },
-  {
-    id: "r4",
-    gameId: "2",
-    userId: "u4",
-    userName: "CyberRunner",
-    userAvatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=cyber",
-    rating: "positive",
-    hoursPlayed: 178,
-    content: "Depois das atualizações, o jogo está incrível. Night City é uma das cidades mais impressionantes que já vi em um game.",
-    date: "15 de janeiro de 2024",
-    helpful: 312,
-    funny: 15,
-  },
-  {
-    id: "r5",
-    gameId: "3",
-    userId: "u5",
-    userName: "WesternFan",
-    userAvatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=western",
-    rating: "positive",
-    hoursPlayed: 320,
-    content: "A melhor história que já joguei. Arthur Morgan é um dos protagonistas mais bem escritos da história dos games.",
-    date: "20 de novembro de 2023",
-    helpful: 567,
-    funny: 34,
-  },
-];
 
 export const useStore = create<StoreState>()(
   persist(
     (set, get) => ({
-      user: defaultUser,
-      isLoggedIn: true,
-      login: (user) => set({ user, isLoggedIn: true }),
-      logout: () => set({ user: null, isLoggedIn: false }),
-      updateProfile: (data) =>
-        set((state) => ({
-          user: state.user ? { ...state.user, ...data } : null,
-        })),
+      // ── Auth ─────────────────────────────────────────────────────────────────
+      user: null,
+      isLoggedIn: false,
+      authLoading: false,
 
+      login: async (email, password) => {
+        set({ authLoading: true });
+        try {
+          await authApi.login({ email, password });
+          const user = await usersApi.me();
+          set({ user, isLoggedIn: true, loginModalOpen: false });
+          await Promise.all([get().loadCart(), get().loadWishlist(), get().loadLibrary()]);
+          // Executa ação pendente após login bem-sucedido
+          const pending = get().pendingAction;
+          if (pending) {
+            set({ pendingAction: null });
+            pending();
+          }
+        } finally {
+          set({ authLoading: false });
+        }
+      },
+
+      logout: async () => {
+        await authApi.logout().catch(() => {});
+        set({ user: null, isLoggedIn: false, cart: [], wishlist: [], library: [] });
+      },
+
+      loadCurrentUser: async () => {
+        try {
+          const user = await usersApi.me();
+          set({ user, isLoggedIn: true });
+        } catch {
+          set({ user: null, isLoggedIn: false });
+        }
+      },
+
+      updateProfile: async (data) => {
+        const { user } = get();
+        if (!user) return;
+        set({ user: { ...user, ...data } });
+        try {
+          const updated = await usersApi.update(user.id, data);
+          set({ user: updated });
+        } catch {
+          set({ user });
+        }
+      },
+
+      // ── Login Modal ──────────────────────────────────────────────────────────
+      loginModalOpen: false,
+      pendingAction: null,
+
+      setLoginModalOpen: (open) => {
+        set({ loginModalOpen: open });
+        if (!open) set({ pendingAction: null });
+      },
+
+      requireLogin: (action) => {
+        if (get().isLoggedIn) {
+          action?.();
+          return true;
+        }
+        set({ loginModalOpen: true, pendingAction: action ?? null });
+        return false;
+      },
+
+      // ── Games ─────────────────────────────────────────────────────────────────
+      apiGames: [],
+      setApiGames: (games) => set({ apiGames: games }),
+
+      // ── Cart ──────────────────────────────────────────────────────────────────
       cart: [],
-      addToCart: (game) =>
-        set((state) => {
-          const existing = state.cart.find((item) => item.game.id === game.id);
-          if (existing) return state;
-          return { cart: [...state.cart, { game, quantity: 1 }] };
-        }),
-      removeFromCart: (gameId) =>
-        set((state) => ({
-          cart: state.cart.filter((item) => item.game.id !== gameId),
-        })),
-      clearCart: () => set({ cart: [] }),
-      getCartTotal: () => {
-        const { cart } = get();
-        return cart.reduce((total, item) => total + item.game.price, 0);
-      },
-      getCartCount: () => {
-        const { cart } = get();
-        return cart.length;
+
+      loadCart: async () => {
+        if (!get().isLoggedIn) return;
+        try {
+          const items = await cartApi.get();
+          const cartItems: CartItem[] = items.map((item) => ({
+            quantity: 1,
+            game: {
+              id: item.gameId,
+              title: item.title,
+              coverImage: item.coverImage,
+              price: item.price,
+              originalPrice: item.originalPrice,
+              discount: item.discount,
+              description: "",
+              longDescription: "",
+              screenshots: [],
+              developer: "",
+              publisher: "",
+              releaseDate: "",
+              genres: [],
+              tags: [],
+              rating: 0,
+              reviewCount: 0,
+              positivePercentage: 0,
+              features: [],
+              systemRequirements: {
+                minimum: { os: "", processor: "", memory: "", graphics: "", storage: "" },
+                recommended: { os: "", processor: "", memory: "", graphics: "", storage: "" },
+              },
+            },
+          }));
+          set({ cart: cartItems });
+        } catch {}
       },
 
-      library: ["9", "12"],
+      addToCart: async (game) => {
+        const state = get();
+        if (state.cart.some((i) => i.game.id === game.id)) return;
+        set((s) => ({ cart: [...s.cart, { game, quantity: 1 }] }));
+        if (state.isLoggedIn) {
+          await cartApi.add(game.id).catch(() => {
+            set((s) => ({ cart: s.cart.filter((i) => i.game.id !== game.id) }));
+          });
+        }
+      },
+
+      removeFromCart: async (gameId) => {
+        const prev = get().cart;
+        set((s) => ({ cart: s.cart.filter((i) => i.game.id !== gameId) }));
+        if (get().isLoggedIn) {
+          await cartApi.remove(gameId).catch(() => set({ cart: prev }));
+        }
+      },
+
+      clearCart: async () => {
+        const prev = get().cart;
+        set({ cart: [] });
+        if (get().isLoggedIn) {
+          await cartApi.clear().catch(() => set({ cart: prev }));
+        }
+      },
+
+      getCartTotal: () => get().cart.reduce((t, i) => t + i.game.price, 0),
+      getCartCount: () => get().cart.length,
+
+      // ── Library ───────────────────────────────────────────────────────────────
+      library: [],
+
+      loadLibrary: async () => {
+        if (!get().isLoggedIn) return;
+        try {
+          const items = await libraryApi.get();
+          set({ library: items.map((i) => i.gameId) });
+        } catch {}
+      },
+
       addToLibrary: (gameId) =>
-        set((state) => ({
-          library: state.library.includes(gameId)
-            ? state.library
-            : [...state.library, gameId],
+        set((s) => ({
+          library: s.library.includes(gameId) ? s.library : [...s.library, gameId],
         })),
+
       removeFromLibrary: (gameId) =>
-        set((state) => ({
-          library: state.library.filter((id) => id !== gameId),
-        })),
+        set((s) => ({ library: s.library.filter((id) => id !== gameId) })),
+
       isInLibrary: (gameId) => get().library.includes(gameId),
 
-      wishlist: ["1", "7"],
-      addToWishlist: (gameId) =>
-        set((state) => ({
-          wishlist: state.wishlist.includes(gameId)
-            ? state.wishlist
-            : [...state.wishlist, gameId],
-        })),
-      removeFromWishlist: (gameId) =>
-        set((state) => ({
-          wishlist: state.wishlist.filter((id) => id !== gameId),
-        })),
+      // ── Wishlist ──────────────────────────────────────────────────────────────
+      wishlist: [],
+
+      loadWishlist: async () => {
+        if (!get().isLoggedIn) return;
+        try {
+          const items = await wishlistApi.get();
+          set({ wishlist: items.map((i) => i.gameId) });
+        } catch {}
+      },
+
+      addToWishlist: async (gameId) => {
+        set((s) => ({
+          wishlist: s.wishlist.includes(gameId) ? s.wishlist : [...s.wishlist, gameId],
+        }));
+        if (get().isLoggedIn) {
+          await wishlistApi.add(gameId).catch(() => {
+            set((s) => ({ wishlist: s.wishlist.filter((id) => id !== gameId) }));
+          });
+        }
+      },
+
+      removeFromWishlist: async (gameId) => {
+        set((s) => ({ wishlist: s.wishlist.filter((id) => id !== gameId) }));
+        if (get().isLoggedIn) {
+          await wishlistApi.remove(gameId).catch(() => {});
+        }
+      },
+
       isInWishlist: (gameId) => get().wishlist.includes(gameId),
 
-      reviews: defaultReviews,
-      addReview: (review) =>
-        set((state) => ({ reviews: [review, ...state.reviews] })),
-      getGameReviews: (gameId) =>
-        get().reviews.filter((r) => r.gameId === gameId),
+      // ── Reviews ───────────────────────────────────────────────────────────────
+      reviews: [],
+      addReview: (review) => set((s) => ({ reviews: [review, ...s.reviews] })),
+      getGameReviews: (gameId) => get().reviews.filter((r) => r.gameId === gameId),
 
+      // ── Filters ───────────────────────────────────────────────────────────────
       searchQuery: "",
       setSearchQuery: (query) => set({ searchQuery: query }),
       selectedGenres: [],
@@ -222,49 +297,31 @@ export const useStore = create<StoreState>()(
       setSortBy: (sort) => set({ sortBy: sort }),
 
       getFilteredGames: () => {
-        const { searchQuery, selectedGenres, priceRange, sortBy } = get();
-
-        let filtered = games.filter((game) => {
+        const { apiGames, searchQuery, selectedGenres, priceRange, sortBy } = get();
+        let filtered = apiGames.filter((game) => {
           const matchesSearch =
             searchQuery === "" ||
             game.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
             game.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            game.genres.some((g) =>
-              g.toLowerCase().includes(searchQuery.toLowerCase())
-            );
-
+            game.genres.some((g) => g.toLowerCase().includes(searchQuery.toLowerCase()));
           const matchesGenres =
             selectedGenres.length === 0 ||
             selectedGenres.some((genre) => game.genres.includes(genre));
-
-          const matchesPrice =
-            game.price >= priceRange[0] && game.price <= priceRange[1];
-
+          const matchesPrice = game.price >= priceRange[0] && game.price <= priceRange[1];
           return matchesSearch && matchesGenres && matchesPrice;
         });
-
         switch (sortBy) {
-          case "price-low":
-            filtered.sort((a, b) => a.price - b.price);
-            break;
-          case "price-high":
-            filtered.sort((a, b) => b.price - a.price);
-            break;
-          case "name":
-            filtered.sort((a, b) => a.title.localeCompare(b.title));
-            break;
-          case "rating":
-            filtered.sort((a, b) => b.rating - a.rating);
-            break;
-          default:
-            break;
+          case "price-low": filtered.sort((a, b) => a.price - b.price); break;
+          case "price-high": filtered.sort((a, b) => b.price - a.price); break;
+          case "name": filtered.sort((a, b) => a.title.localeCompare(b.title)); break;
+          case "rating": filtered.sort((a, b) => b.rating - a.rating); break;
         }
-
         return filtered;
       },
     }),
     {
-      name: "Nebula-store",
+      name: "nebula-store",
+      skipHydration: true,
       partialize: (state) => ({
         cart: state.cart,
         library: state.library,

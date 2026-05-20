@@ -12,12 +12,21 @@ import {
   Heart,
   Menu,
   X,
+  LogIn,
+  LogOut,
 } from "lucide-react";
 import { useState } from "react";
 import { useStore } from "@/lib/store";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import {
   Sheet,
   SheetContent,
@@ -37,7 +46,7 @@ export function Header() {
   const pathname = usePathname();
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const { searchQuery, setSearchQuery, getCartCount, user, wishlist } = useStore();
+  const { searchQuery, setSearchQuery, getCartCount, user, wishlist, isLoggedIn, logout, setLoginModalOpen } = useStore();
   const cartCount = getCartCount();
 
   return (
@@ -151,13 +160,50 @@ export function Header() {
               </Button>
             </Link>
 
-            {/* User Avatar */}
-            <Link href="/perfil" className="hidden sm:block">
-              <Avatar className="w-9 h-9 border-2 border-primary/50 transition-transform hover:scale-105">
-                <AvatarImage src={user?.avatar} alt={user?.displayName} />
-                <AvatarFallback>{user?.displayName?.charAt(0)}</AvatarFallback>
-              </Avatar>
-            </Link>
+            {/* User Avatar / Login */}
+            {isLoggedIn && user ? (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <button className="hidden sm:block">
+                    <Avatar className="w-9 h-9 border-2 border-primary/50 transition-transform hover:scale-105">
+                      <AvatarImage
+                        src={user.avatar ?? `https://api.dicebear.com/7.x/avataaars/svg?seed=${user.username}`}
+                        alt={user.displayName}
+                      />
+                      <AvatarFallback>{user.displayName?.charAt(0)}</AvatarFallback>
+                    </Avatar>
+                  </button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="glass w-48">
+                  <div className="px-3 py-2">
+                    <p className="font-semibold text-sm">{user.displayName}</p>
+                    <p className="text-xs text-muted-foreground">@{user.username}</p>
+                  </div>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem asChild>
+                    <Link href="/perfil" className="gap-2 cursor-pointer">
+                      <User className="w-4 h-4" /> Perfil
+                    </Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem
+                    onClick={() => logout()}
+                    className="gap-2 text-destructive cursor-pointer"
+                  >
+                    <LogOut className="w-4 h-4" /> Sair
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            ) : (
+              <Button
+                variant="outline"
+                size="sm"
+                className="hidden sm:flex gap-2"
+                onClick={() => setLoginModalOpen(true)}
+              >
+                <LogIn className="w-4 h-4" /> Entrar
+              </Button>
+            )}
 
             {/* Mobile Menu */}
             <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>

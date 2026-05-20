@@ -3,7 +3,10 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev",
+    "dev": "npm i && next dev --turbopack",
+    "dev:vanilla": "npm i && next dev",
+    "dev:https": "npm i && set NODE_OPTIONS=--use-system-ca && next dev --turbopack --experimental-https",
+    "dev:https-cert": "npm i && next dev --turbopack --experimental-https --experimental-https-key ./certificates/localhost-key.pem --experimental-https-cert ./certificates/localhost.pem",
     "build": "next build",
     "start": "next start",
     "lint": "eslint ."

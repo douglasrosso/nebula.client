@@ -2,6 +2,8 @@ import type { Metadata, Viewport } from 'next'
 import { Inter } from 'next/font/google'
 import { Analytics } from '@vercel/analytics/next'
 import { Header } from '@/components/header'
+import { StoreHydration } from '@/components/store-hydration'
+import { LoginModal } from '@/components/login-modal'
 import './globals.css'
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-sans" });
@@ -25,8 +27,10 @@ export default function RootLayout({
   children: React.ReactNode
 }>) {
   return (
-    <html lang="pt-BR" className="bg-background">
-      <body className={`${inter.variable} font-sans antialiased min-h-screen`}>
+    <html lang="pt-BR" className="bg-background" suppressHydrationWarning>
+      <body className={`${inter.variable} font-sans antialiased min-h-screen`} suppressHydrationWarning>
+        <StoreHydration />
+        <LoginModal />
         <Header />
         {children}
         {process.env.NODE_ENV === 'production' && <Analytics />}

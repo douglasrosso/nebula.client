@@ -1,7 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useSearchParams } from "next/navigation";
 import { useStore } from "@/lib/store";
+import { useGames } from "@/lib/hooks/useGames";
 import { GameCard } from "@/components/game-card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -22,24 +24,16 @@ import {
   SheetTrigger,
 } from "@/components/ui/sheet";
 import { Slider } from "@/components/ui/slider";
-import { Search, SlidersHorizontal, X } from "lucide-react";
+import { Search, SlidersHorizontal, X, Loader2 } from "lucide-react";
+import { gamesApi } from "@/lib/api";
 
-const allGenres = [
-  "Ação",
-  "RPG",
-  "Aventura",
-  "Mundo Aberto",
-  "FPS",
-  "Terror",
-  "Estratégia",
-  "Corrida",
-  "Simulador",
-  "Sandbox",
-  "Indie",
-  "Esportes",
+const DEFAULT_GENRES = [
+  "Ação", "RPG", "Aventura", "Mundo Aberto", "FPS", "Terror",
+  "Estratégia", "Corrida", "Simulador", "Sandbox", "Indie", "Esportes",
 ];
 
 export default function StorePage() {
+  const searchParams = useSearchParams();
   const {
     searchQuery,
     setSearchQuery,
@@ -53,7 +47,27 @@ export default function StorePage() {
   } = useStore();
 
   const [localSearch, setLocalSearch] = useState(searchQuery);
+  const [apiGenres, setApiGenres] = useState<string[]>(DEFAULT_GENRES);
+
+  // Load all games into the store
+  const { loading } = useGames({ pageSize: 200 });
+
   const filteredGames = getFilteredGames();
+
+  // Apply URL query params on mount
+  useEffect(() => {
+    const genre = searchParams.get("genre");
+    if (genre && !selectedGenres.includes(genre)) {
+      setSelectedGenres([genre]);
+    }
+  }, []);
+
+  // Load genres from API
+  useEffect(() => {
+    gamesApi.genres().then((genres) => {
+      if (genres.length > 0) setApiGenres(genres.map((g) => g.name));
+    }).catch(() => {});
+  }, []);
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
@@ -84,7 +98,6 @@ export default function StorePage() {
 
   const FiltersContent = () => (
     <div className="space-y-6">
-      {/* Price Range */}
       <div>
         <h3 className="font-semibold mb-4">Faixa de Preço</h3>
         <div className="px-2">
@@ -102,15 +115,11 @@ export default function StorePage() {
         </div>
       </div>
 
-      {/* Genres */}
       <div>
         <h3 className="font-semibold mb-4">Gêneros</h3>
         <div className="space-y-3">
-          {allGenres.map((genre) => (
-            <label
-              key={genre}
-              className="flex items-center gap-3 cursor-pointer"
-            >
+          {apiGenres.map((genre) => (
+            <label key={genre} className="flex items-center gap-3 cursor-pointer">
               <Checkbox
                 checked={selectedGenres.includes(genre)}
                 onCheckedChange={() => toggleGenre(genre)}
@@ -122,13 +131,8 @@ export default function StorePage() {
         </div>
       </div>
 
-      {/* Clear Filters */}
       {hasActiveFilters && (
-        <Button
-          variant="outline"
-          onClick={clearFilters}
-          className="w-full gap-2"
-        >
+        <Button variant="outline" onClick={clearFilters} className="w-full gap-2">
           <X className="w-4 h-4" />
           Limpar filtros
         </Button>
@@ -139,15 +143,11 @@ export default function StorePage() {
   return (
     <main id="main-content" className="min-h-screen pt-20 lg:pt-24 pb-12">
       <div className="container mx-auto px-4">
-        {/* Header */}
         <div className="mb-8">
           <h1 className="text-3xl font-bold mb-2">Loja</h1>
-          <p className="text-muted-foreground">
-            Descubra sua próxima aventura entre centenas de jogos
-          </p>
+          <p className="text-muted-foreground">Descubra sua próxima aventura entre centenas de jogos</p>
         </div>
 
-        {/* Search and Filters Bar */}
         <div className="flex flex-col sm:flex-row gap-4 mb-8">
           <form onSubmit={handleSearch} className="flex-1 relative">
             <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
@@ -162,10 +162,7 @@ export default function StorePage() {
           </form>
 
           <div className="flex gap-3">
-            <Select
-              value={sortBy}
-              onValueChange={(value) => setSortBy(value as typeof sortBy)}
-            >
+            <Select value={sortBy} onValueChange={(value) => setSortBy(value as typeof sortBy)}>
               <SelectTrigger className="w-48 h-12 bg-secondary/50 border-glass-border rounded-xl">
                 <SelectValue placeholder="Ordenar por" />
               </SelectTrigger>
@@ -178,7 +175,6 @@ export default function StorePage() {
               </SelectContent>
             </Select>
 
-            {/* Mobile Filters */}
             <Sheet>
               <SheetTrigger asChild className="lg:hidden">
                 <Button
@@ -205,17 +201,13 @@ export default function StorePage() {
           </div>
         </div>
 
-        {/* Active Filters */}
         {hasActiveFilters && (
           <div className="flex flex-wrap gap-2 mb-6">
             {searchQuery && (
               <Badge
                 variant="secondary"
                 className="gap-2 px-3 py-1.5 cursor-pointer"
-                onClick={() => {
-                  setSearchQuery("");
-                  setLocalSearch("");
-                }}
+                onClick={() => { setSearchQuery(""); setLocalSearch(""); }}
               >
                 Busca: {searchQuery}
                 <X className="w-3 h-3" />
@@ -246,7 +238,6 @@ export default function StorePage() {
         )}
 
         <div className="flex gap-8">
-          {/* Desktop Sidebar Filters */}
           <aside className="hidden lg:block w-64 flex-shrink-0">
             <div className="glass rounded-2xl p-6 sticky top-28">
               <h2 className="font-bold text-lg mb-6">Filtros</h2>
@@ -254,15 +245,21 @@ export default function StorePage() {
             </div>
           </aside>
 
-          {/* Games Grid */}
           <div className="flex-1">
             <div className="flex items-center justify-between mb-4">
-              <p className="text-muted-foreground">
-                {filteredGames.length} jogos encontrados
-              </p>
+              {loading ? (
+                <div className="flex items-center gap-2 text-muted-foreground">
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  Carregando jogos...
+                </div>
+              ) : (
+                <p className="text-muted-foreground">
+                  {filteredGames.length} jogo{filteredGames.length !== 1 ? "s" : ""} encontrado{filteredGames.length !== 1 ? "s" : ""}
+                </p>
+              )}
             </div>
 
-            {filteredGames.length === 0 ? (
+            {!loading && filteredGames.length === 0 ? (
               <div className="glass rounded-2xl p-12 text-center">
                 <p className="text-muted-foreground mb-4">
                   Nenhum jogo encontrado com os filtros selecionados.

@@ -3,7 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { Star, ShoppingCart, Heart, Check, Play } from "lucide-react";
-import { type Game } from "@/lib/games-data";
+import { type Game } from "@/lib/store";
 import { useStore } from "@/lib/store";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -21,6 +21,7 @@ export function GameCard({ game, variant = "default" }: GameCardProps) {
     removeFromWishlist,
     isInWishlist,
     isInLibrary,
+    requireLogin,
   } = useStore();
 
   const inCart = cart.some((item) => item.game.id === game.id);
@@ -31,7 +32,7 @@ export function GameCard({ game, variant = "default" }: GameCardProps) {
     e.preventDefault();
     e.stopPropagation();
     if (!inCart && !inLibrary) {
-      addToCart(game);
+      requireLogin(() => addToCart(game));
     }
   };
 
@@ -41,7 +42,7 @@ export function GameCard({ game, variant = "default" }: GameCardProps) {
     if (inWishlist) {
       removeFromWishlist(game.id);
     } else {
-      addToWishlist(game.id);
+      requireLogin(() => addToWishlist(game.id));
     }
   };
 
