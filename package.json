@@ -5,8 +5,8 @@
   "scripts": {
     "dev": "npm i && next dev --turbopack",
     "dev:vanilla": "npm i && next dev",
-    "dev:https": "npm i && set NODE_OPTIONS=--use-system-ca && next dev --turbopack --experimental-https",
-    "dev:https-cert": "npm i && next dev --turbopack --experimental-https --experimental-https-key ./certificates/localhost-key.pem --experimental-https-cert ./certificates/localhost.pem",
+    "dev:https": "npm i && cross-env NODE_OPTIONS=--use-system-ca next dev --turbopack --experimental-https",
+    "dev:https-cert": "npm i && cross-env NODE_OPTIONS=--use-system-ca && next dev --turbopack --experimental-https --experimental-https-key ./certificates/localhost-key.pem --experimental-https-cert ./certificates/localhost.pem",
     "build": "next build",
     "start": "next start",
     "lint": "eslint ."
@@ -68,6 +68,7 @@
     "@types/node": "^22",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "cross-env": "^10.1.0",
     "postcss": "^8.5",
     "tailwindcss": "^4.2.0",
     "tw-animate-css": "1.3.3",
