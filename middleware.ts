@@ -1,17 +1,17 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
-const PRIVATE_ROUTES = ["/biblioteca", "/lista-desejos", "/perfil", "/carrinho"];
+const PRIVATE_ROUTES = ["/loja", "/biblioteca", "/lista-desejos", "/perfil", "/carrinho", "/chat", "/jogo"];
 const GUEST_ROUTES = ["/login", "/cadastro"];
 
-export function proxy(request: NextRequest) {
+export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
   const token = request.cookies.get("NebulaAuthToken")?.value;
   const isAuthenticated = Boolean(token);
 
   if (GUEST_ROUTES.some((r) => pathname.startsWith(r))) {
     if (isAuthenticated) {
-      return NextResponse.redirect(new URL("/", request.url));
+      return NextResponse.redirect(new URL("/loja", request.url));
     }
     return NextResponse.next();
   }

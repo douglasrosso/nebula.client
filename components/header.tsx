@@ -4,11 +4,12 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useTheme } from "next-themes";
 import {
-  Home, Store, Library, User, ShoppingCart,
-  Search, Heart, Menu, X, LogIn, LogOut, Sun, Moon,
+  Store, Library, Heart, MessageCircle,
+  Search, Menu, X, LogIn, LogOut, Sun, Moon,
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { useStore } from "@/lib/store";
+import { avatarUrl } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -22,10 +23,10 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 const navItems = [
-  { href: "/", label: "Início", icon: Home },
   { href: "/loja", label: "Loja", icon: Store },
   { href: "/biblioteca", label: "Biblioteca", icon: Library },
-  { href: "/perfil", label: "Perfil", icon: User },
+  { href: "/lista-desejos", label: "Lista de Desejos", icon: Heart },
+  { href: "/chat", label: "Chat", icon: MessageCircle },
 ];
 
 function ThemeToggle() {
@@ -52,8 +53,8 @@ export function Header() {
   const pathname = usePathname();
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const { searchQuery, setSearchQuery, getCartCount, user, wishlist, isLoggedIn, logout } = useStore();
-  const cartCount = getCartCount();
+  const { searchQuery, setSearchQuery, user, wishlist, isLoggedIn, logout } = useStore();
+  const totalUnread = useStore((s) => Object.values(s.unreadByFriend).reduce((a, b) => a + b, 0));
 
   return (
     <header className="fixed top-0 left-0 right-0 z-50 glass border-b border-glass-border">
@@ -62,7 +63,7 @@ export function Header() {
         <div className="flex items-center justify-between h-16">
 
           {/* Logo */}
-          <Link href="/" className="flex items-center gap-2.5 shrink-0" aria-label="Nebula">
+          <Link href="/loja" className="flex items-center gap-2.5 shrink-0" aria-label="Nebula">
             <div
               className="w-8 h-8 rounded-xl flex items-center justify-center shadow-sm"
               style={{ background: "linear-gradient(145deg, oklch(0.55 0.26 258), oklch(0.45 0.24 280))" }}
@@ -148,13 +149,13 @@ export function Header() {
               </Button>
             </Link>
 
-            {/* Cart */}
-            <Link href="/carrinho" aria-label={`Carrinho, ${cartCount} itens`}>
+            {/* Chat */}
+            <Link href="/chat" aria-label={`Chat${totalUnread > 0 ? `, ${totalUnread} mensagens não lidas` : ""}`}>
               <Button variant="ghost" size="icon" className="h-9 w-9 relative">
-                <ShoppingCart className="w-4 h-4" />
-                {cartCount > 0 && (
+                <MessageCircle className="w-4 h-4" />
+                {totalUnread > 0 && (
                   <Badge className="absolute -top-0.5 -right-0.5 w-4 h-4 p-0 flex items-center justify-center text-[10px] border-0">
-                    {cartCount}
+                    {totalUnread > 99 ? "99+" : totalUnread}
                   </Badge>
                 )}
               </Button>
@@ -167,7 +168,7 @@ export function Header() {
                   <button className="hidden sm:block ml-1 rounded-full ring-2 ring-transparent hover:ring-primary/40 transition-all duration-150">
                     <Avatar className="w-8 h-8">
                       <AvatarImage
-                        src={user.avatar ?? `https://api.dicebear.com/7.x/avataaars/svg?seed=${user.username}`}
+                        src={avatarUrl(user)}
                         alt={user.displayName}
                       />
                       <AvatarFallback className="text-xs">{user.displayName?.charAt(0)}</AvatarFallback>
@@ -179,12 +180,6 @@ export function Header() {
                     <p className="font-semibold text-sm">{user.displayName}</p>
                     <p className="text-xs text-muted-foreground">@{user.username}</p>
                   </div>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem asChild>
-                    <Link href="/perfil" className="gap-2 cursor-pointer">
-                      <User className="w-4 h-4" /> Perfil
-                    </Link>
-                  </DropdownMenuItem>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem
                     onClick={() => logout()}
@@ -260,7 +255,6 @@ export function Header() {
                   </div>
 
                   <div className="p-5 border-t border-border space-y-3">
-                    {/* Theme toggle in mobile */}
                     <div className="flex items-center justify-between px-3 py-2 rounded-xl bg-surface-inset">
                       <span className="text-sm font-medium">Aparência</span>
                       <ThemeToggle />
@@ -274,7 +268,7 @@ export function Header() {
                         </Avatar>
                         <div className="flex-1 min-w-0">
                           <p className="font-semibold text-sm truncate">{user.displayName}</p>
-                          <p className="text-xs text-muted-foreground">Nível {user.level}</p>
+                          <p className="text-xs text-muted-foreground">@{user.username}</p>
                         </div>
                         <Button
                           variant="ghost"

@@ -1,25 +1,36 @@
 "use client";
 
+import { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useStore } from "@/lib/store";
 import { useGames } from "@/lib/hooks/useGames";
 import { AuthGuard } from "@/components/auth-guard";
-import { Heart, ShoppingCart, Trash2, ArrowRight, Check } from "lucide-react";
-
-function formatPrice(price: number) {
-  if (price === 0) return "Gratuito";
-  return new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(price);
-}
+import { Heart, Trash2, ArrowRight, Check, Loader2 } from "lucide-react";
+import { toast } from "sonner";
+import { formatPrice } from "@/lib/utils";
 
 export default function WishlistPage() {
-  const { wishlist, removeFromWishlist, addToCart, cart, apiGames } = useStore();
+  const { wishlist, removeFromWishlist, apiGames, purchase, isInLibrary } = useStore();
+  const [buyingId, setBuyingId] = useState<string | null>(null);
 
   useGames({ pageSize: 200 });
 
   const wishlistGames = apiGames.filter((g) => wishlist.includes(g.id));
   const totalValue = wishlistGames.reduce((t, g) => t + g.price, 0);
   const totalSavings = wishlistGames.reduce((t, g) => (g.originalPrice ? t + (g.originalPrice - g.price) : t), 0);
+
+  async function handleBuy(game: typeof wishlistGames[number]) {
+    setBuyingId(game.id);
+    try {
+      await purchase(game);
+      toast.success(`${game.title} adicionado à biblioteca!`);
+    } catch {
+      toast.error("Erro ao comprar jogo. Tente novamente.");
+    } finally {
+      setBuyingId(null);
+    }
+  }
 
   return (
     <AuthGuard>
@@ -67,7 +78,8 @@ export default function WishlistPage() {
 
               <div className="rounded-2xl overflow-hidden bg-surface-base">
                 {wishlistGames.map((game, i) => {
-                  const inCart = cart.some((item) => item.game.id === game.id);
+                  const owned = isInLibrary(game.id);
+                  const buying = buyingId === game.id;
                   return (
                     <article
                       key={game.id}
@@ -127,31 +139,25 @@ export default function WishlistPage() {
                               {formatPrice(game.price)}
                             </span>
                           </div>
-                          <button
-                            onClick={() => addToCart(game)}
-                            disabled={inCart}
-                            className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-[14px] font-semibold transition-opacity disabled:opacity-60 ${inCart ? "bg-surface-inset text-foreground" : "bg-primary text-primary-foreground hover:opacity-80"}`}
-                          >
-                            {inCart ? <><Check className="w-4 h-4" /> No carrinho</> : <><ShoppingCart className="w-4 h-4" /> Adicionar</>}
-                          </button>
+                          {owned ? (
+                            <span className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-[14px] font-semibold bg-surface-inset text-muted-foreground">
+                              <Check className="w-4 h-4" /> Na biblioteca
+                            </span>
+                          ) : (
+                            <button
+                              onClick={() => handleBuy(game)}
+                              disabled={buying}
+                              className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-[14px] font-semibold transition-opacity disabled:opacity-60 bg-primary text-primary-foreground hover:opacity-80"
+                            >
+                              {buying ? <Loader2 className="w-4 h-4 animate-spin" /> : "Comprar"}
+                            </button>
+                          )}
                         </div>
                       </div>
                     </article>
                   );
                 })}
               </div>
-
-              {wishlistGames.length > 1 && (
-                <div className="mt-6 flex justify-center">
-                  <button
-                    onClick={() => wishlistGames.forEach((g) => { if (!cart.some((i) => i.game.id === g.id)) addToCart(g); })}
-                    className="flex items-center gap-2 px-6 py-3 rounded-xl text-[15px] font-semibold text-primary-foreground bg-primary transition-opacity hover:opacity-80"
-                  >
-                    <ShoppingCart className="w-4 h-4" />
-                    Adicionar todos ao carrinho
-                  </button>
-                </div>
-              )}
             </>
           )}
         </div>

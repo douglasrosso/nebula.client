@@ -152,3 +152,21 @@ export interface ApiError {
   message: string;
   errors?: Record<string, string[]>;
 }
+
+export interface ApiFriend {
+  id: string;
+  username: string;
+  displayName: string;
+  avatar?: string;
+  status: "none" | "pending_sent" | "pending_received" | "accepted";
+  isRequester: boolean;
+}
+
+export interface ApiMessage {
+  id: string;
+  senderId: string;
+  receiverId: string;
+  content: string;
+  isRead: boolean;
+  sentAt: string;
+}

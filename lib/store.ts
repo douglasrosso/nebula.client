@@ -2,39 +2,20 @@
 
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
-import type { ApiGame, ApiUser, ApiReview } from "./types";
-import { authApi, usersApi, cartApi, wishlistApi, libraryApi, ordersApi } from "./api";
+import type { ApiGame, ApiUser } from "./types";
+import { authApi, usersApi, wishlistApi, libraryApi, purchaseApi } from "./api";
 
 export type { ApiGame as Game };
 
-export interface Review {
-  id: string;
-  gameId: string;
-  userId: string;
-  userName: string;
-  userAvatar: string;
-  rating: "positive" | "negative";
-  hoursPlayed: number;
-  content: string;
-  date: string;
-  helpful: number;
-  funny: number;
-}
-
-interface CartItem {
-  game: ApiGame;
-  quantity: number;
-}
-
 interface StoreState {
   // ── Auth ────────────────────────────────────────────────────────────────────
+  isHydrated: boolean;
   user: ApiUser | null;
   isLoggedIn: boolean;
   authLoading: boolean;
   login: (email: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
   loadCurrentUser: () => Promise<void>;
-  updateProfile: (data: Partial<ApiUser>) => Promise<void>;
 
   /** Redireciona para /login se não autenticado. Retorna true se já logado. */
   requireLogin: (action?: () => void) => boolean;
@@ -43,20 +24,10 @@ interface StoreState {
   apiGames: ApiGame[];
   setApiGames: (games: ApiGame[]) => void;
 
-  // ── Cart ──────────────────────────────────────────────────────────────────
-  cart: CartItem[];
-  addToCart: (game: ApiGame) => Promise<void>;
-  removeFromCart: (gameId: string) => Promise<void>;
-  clearCart: () => Promise<void>;
-  loadCart: () => Promise<void>;
-  getCartTotal: () => number;
-  getCartCount: () => number;
-
   // ── Library ───────────────────────────────────────────────────────────────
   library: string[];
   loadLibrary: () => Promise<void>;
   addToLibrary: (gameId: string) => void;
-  removeFromLibrary: (gameId: string) => void;
   isInLibrary: (gameId: string) => boolean;
 
   // ── Wishlist ──────────────────────────────────────────────────────────────
@@ -66,10 +37,16 @@ interface StoreState {
   loadWishlist: () => Promise<void>;
   isInWishlist: (gameId: string) => boolean;
 
-  // ── Reviews ───────────────────────────────────────────────────────────────
-  reviews: Review[];
-  addReview: (review: Review) => void;
-  getGameReviews: (gameId: string) => Review[];
+  // ── Purchase ──────────────────────────────────────────────────────────────
+  purchase: (game: ApiGame) => Promise<void>;
+
+  // ── Unread messages ───────────────────────────────────────────────────────
+  unreadByFriend: Record<string, number>;
+  incrementUnreadForFriend: (friendId: string) => void;
+  markConversationRead: (friendId: string) => void;
+  unreadFriendRequests: number;
+  incrementFriendRequests: () => void;
+  clearFriendRequests: () => void;
 
   // ── Filters ───────────────────────────────────────────────────────────────
   searchQuery: string;
@@ -87,6 +64,7 @@ export const useStore = create<StoreState>()(
   persist(
     (set, get) => ({
       // ── Auth ─────────────────────────────────────────────────────────────────
+      isHydrated: false,
       user: null,
       isLoggedIn: false,
       authLoading: false,
@@ -97,7 +75,7 @@ export const useStore = create<StoreState>()(
           await authApi.login({ email, password });
           const user = await usersApi.me();
           set({ user, isLoggedIn: true });
-          await Promise.all([get().loadCart(), get().loadWishlist(), get().loadLibrary()]);
+          await Promise.all([get().loadWishlist(), get().loadLibrary()]);
         } finally {
           set({ authLoading: false });
         }
@@ -105,7 +83,8 @@ export const useStore = create<StoreState>()(
 
       logout: async () => {
         await authApi.logout().catch(() => {});
-        set({ user: null, isLoggedIn: false, cart: [], wishlist: [], library: [] });
+        set({ user: null, isLoggedIn: false, wishlist: [], library: [], unreadByFriend: {}, unreadFriendRequests: 0 });
+        window.location.replace("/login");
       },
 
       loadCurrentUser: async () => {
@@ -114,18 +93,6 @@ export const useStore = create<StoreState>()(
           set({ user, isLoggedIn: true });
         } catch {
           set({ user: null, isLoggedIn: false });
-        }
-      },
-
-      updateProfile: async (data) => {
-        const { user } = get();
-        if (!user) return;
-        set({ user: { ...user, ...data } });
-        try {
-          const updated = await usersApi.update(user.id, data);
-          set({ user: updated });
-        } catch {
-          set({ user });
         }
       },
 
@@ -142,74 +109,6 @@ export const useStore = create<StoreState>()(
       apiGames: [],
       setApiGames: (games) => set({ apiGames: games }),
 
-      // ── Cart ──────────────────────────────────────────────────────────────────
-      cart: [],
-
-      loadCart: async () => {
-        if (!get().isLoggedIn) return;
-        try {
-          const items = await cartApi.get();
-          const cartItems: CartItem[] = items.map((item) => ({
-            quantity: 1,
-            game: {
-              id: item.gameId,
-              title: item.title,
-              coverImage: item.coverImage,
-              price: item.price,
-              originalPrice: item.originalPrice,
-              discount: item.discount,
-              description: "",
-              longDescription: "",
-              screenshots: [],
-              developer: "",
-              publisher: "",
-              releaseDate: "",
-              genres: [],
-              tags: [],
-              rating: 0,
-              reviewCount: 0,
-              positivePercentage: 0,
-              features: [],
-              systemRequirements: {
-                minimum: { os: "", processor: "", memory: "", graphics: "", storage: "" },
-                recommended: { os: "", processor: "", memory: "", graphics: "", storage: "" },
-              },
-            },
-          }));
-          set({ cart: cartItems });
-        } catch {}
-      },
-
-      addToCart: async (game) => {
-        const state = get();
-        if (state.cart.some((i) => i.game.id === game.id)) return;
-        set((s) => ({ cart: [...s.cart, { game, quantity: 1 }] }));
-        if (state.isLoggedIn) {
-          await cartApi.add(game.id).catch(() => {
-            set((s) => ({ cart: s.cart.filter((i) => i.game.id !== game.id) }));
-          });
-        }
-      },
-
-      removeFromCart: async (gameId) => {
-        const prev = get().cart;
-        set((s) => ({ cart: s.cart.filter((i) => i.game.id !== gameId) }));
-        if (get().isLoggedIn) {
-          await cartApi.remove(gameId).catch(() => set({ cart: prev }));
-        }
-      },
-
-      clearCart: async () => {
-        const prev = get().cart;
-        set({ cart: [] });
-        if (get().isLoggedIn) {
-          await cartApi.clear().catch(() => set({ cart: prev }));
-        }
-      },
-
-      getCartTotal: () => get().cart.reduce((t, i) => t + i.game.price, 0),
-      getCartCount: () => get().cart.length,
-
       // ── Library ───────────────────────────────────────────────────────────────
       library: [],
 
@@ -225,9 +124,6 @@ export const useStore = create<StoreState>()(
         set((s) => ({
           library: s.library.includes(gameId) ? s.library : [...s.library, gameId],
         })),
-
-      removeFromLibrary: (gameId) =>
-        set((s) => ({ library: s.library.filter((id) => id !== gameId) })),
 
       isInLibrary: (gameId) => get().library.includes(gameId),
 
@@ -256,16 +152,37 @@ export const useStore = create<StoreState>()(
       removeFromWishlist: async (gameId) => {
         set((s) => ({ wishlist: s.wishlist.filter((id) => id !== gameId) }));
         if (get().isLoggedIn) {
-          await wishlistApi.remove(gameId).catch(() => {});
+          await wishlistApi.remove(gameId).catch(() => {
+            set((s) => ({ wishlist: s.wishlist.includes(gameId) ? s.wishlist : [...s.wishlist, gameId] }));
+          });
         }
       },
 
       isInWishlist: (gameId) => get().wishlist.includes(gameId),
 
-      // ── Reviews ───────────────────────────────────────────────────────────────
-      reviews: [],
-      addReview: (review) => set((s) => ({ reviews: [review, ...s.reviews] })),
-      getGameReviews: (gameId) => get().reviews.filter((r) => r.gameId === gameId),
+      // ── Purchase ──────────────────────────────────────────────────────────────
+      purchase: async (game) => {
+        await purchaseApi.buy(game.id);
+        set((s) => ({
+          library: s.library.includes(game.id) ? s.library : [...s.library, game.id],
+        }));
+      },
+
+      // ── Unread messages ───────────────────────────────────────────────────────
+      unreadByFriend: {},
+      incrementUnreadForFriend: (friendId) =>
+        set((s) => ({
+          unreadByFriend: { ...s.unreadByFriend, [friendId]: (s.unreadByFriend[friendId] ?? 0) + 1 },
+        })),
+      markConversationRead: (friendId) =>
+        set((s) => {
+          const next = { ...s.unreadByFriend };
+          delete next[friendId];
+          return { unreadByFriend: next };
+        }),
+      unreadFriendRequests: 0,
+      incrementFriendRequests: () => set((s) => ({ unreadFriendRequests: s.unreadFriendRequests + 1 })),
+      clearFriendRequests: () => set({ unreadFriendRequests: 0 }),
 
       // ── Filters ───────────────────────────────────────────────────────────────
       searchQuery: "",
@@ -303,11 +220,12 @@ export const useStore = create<StoreState>()(
     {
       name: "nebula-store",
       skipHydration: true,
+      onRehydrateStorage: () => (state) => {
+        if (state) state.isHydrated = true;
+      },
       partialize: (state) => ({
-        cart: state.cart,
         library: state.library,
         wishlist: state.wishlist,
-        reviews: state.reviews,
         user: state.user,
         isLoggedIn: state.isLoggedIn,
       }),

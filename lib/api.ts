@@ -1,17 +1,15 @@
 import type {
   ApiGame,
   ApiUser,
-  ApiReview,
-  ApiCartItem,
   ApiWishlistItem,
   ApiLibraryItem,
-  ApiOrder,
   ApiGenre,
   PaginatedResult,
   GameQuery,
   LoginRequest,
   CreateUserRequest,
-  CreateReviewRequest,
+  ApiFriend,
+  ApiMessage,
 } from "./types";
 
 const BASE_URL = process.env.NEXT_PUBLIC_APP_URL ?? "https://localhost:3000";
@@ -84,41 +82,6 @@ export const gamesApi = {
   genres: () => request<ApiGenre[]>("/api/games/genres"),
 };
 
-// ── Reviews ───────────────────────────────────────────────────────────────────
-
-export const reviewsApi = {
-  forGame: (gameId: string) => request<ApiReview[]>(`/api/reviews/game/${gameId}`),
-
-  create: (dto: CreateReviewRequest) =>
-    request<ApiReview>("/api/reviews", {
-      method: "POST",
-      body: JSON.stringify(dto),
-    }),
-
-  markHelpful: (id: string) =>
-    request<void>(`/api/reviews/${id}/helpful`, { method: "POST" }),
-
-  markFunny: (id: string) =>
-    request<void>(`/api/reviews/${id}/funny`, { method: "POST" }),
-
-  delete: (id: string) =>
-    request<void>(`/api/reviews/${id}`, { method: "DELETE" }),
-};
-
-// ── Cart ──────────────────────────────────────────────────────────────────────
-
-export const cartApi = {
-  get: () => request<ApiCartItem[]>("/api/cart"),
-
-  add: (gameId: string) =>
-    request<void>(`/api/cart/${gameId}`, { method: "POST" }),
-
-  remove: (gameId: string) =>
-    request<void>(`/api/cart/${gameId}`, { method: "DELETE" }),
-
-  clear: () => request<void>("/api/cart", { method: "DELETE" }),
-};
-
 // ── Wishlist ──────────────────────────────────────────────────────────────────
 
 export const wishlistApi = {
@@ -135,17 +98,40 @@ export const wishlistApi = {
 
 export const libraryApi = {
   get: () => request<ApiLibraryItem[]>("/api/library"),
-
-  isOwned: (gameId: string) =>
-    request<{ owned: boolean }>(`/api/library/${gameId}/owned`),
 };
 
-// ── Orders ────────────────────────────────────────────────────────────────────
+// ── Purchase (adds to library + wishlist) ─────────────────────────────────────
 
-export const ordersApi = {
-  list: () => request<ApiOrder[]>("/api/orders"),
+export const purchaseApi = {
+  buy: (gameId: string) =>
+    request<void>(`/api/library/${gameId}`, { method: "POST" }),
+};
 
-  getById: (id: string) => request<ApiOrder>(`/api/orders/${id}`),
+// ── Friends ───────────────────────────────────────────────────────────────────
 
-  checkout: () => request<ApiOrder>("/api/orders/checkout", { method: "POST" }),
+export const friendsApi = {
+  list: () => request<ApiFriend[]>("/api/friends"),
+
+  requests: () => request<ApiFriend[]>("/api/friends/requests"),
+
+  search: (q: string) =>
+    request<ApiFriend[]>(`/api/friends/search?q=${encodeURIComponent(q)}`),
+
+  add: (userId: string) =>
+    request<void>(`/api/friends/${userId}`, { method: "POST" }),
+
+  accept: (requesterId: string) =>
+    request<void>(`/api/friends/${requesterId}/accept`, { method: "PUT" }),
+
+  remove: (friendId: string) =>
+    request<void>(`/api/friends/${friendId}`, { method: "DELETE" }),
+};
+
+// ── Messages ──────────────────────────────────────────────────────────────────
+
+export const messagesApi = {
+  getConversation: (friendId: string, page = 1) =>
+    request<ApiMessage[]>(`/api/messages/${friendId}?page=${page}&pageSize=50`),
+  markRead: (friendId: string) =>
+    request<void>(`/api/messages/${friendId}/read`, { method: "PUT" }),
 };

@@ -11,6 +11,10 @@ const nextConfig: NextConfig = {
         protocol: "https",
         hostname: "cdn.akamai.steamstatic.com",
       },
+      {
+        protocol: "https",
+        hostname: "shared.akamai.steamstatic.com",
+      },
     ],
   },
   async rewrites() {
@@ -18,6 +22,10 @@ const nextConfig: NextConfig = {
       {
         source: "/api/:path*",
         destination: `${process.env.NEXT_PUBLIC_API_URL}/api/:path*`,
+      },
+      {
+        source: "/hubs/:path*",
+        destination: `${process.env.NEXT_PUBLIC_API_URL}/hubs/:path*`,
       },
     ];
   },

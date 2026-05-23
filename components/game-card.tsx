@@ -2,9 +2,11 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { Play, Check } from "lucide-react";
-import { type Game } from "@/lib/store";
-import { useStore } from "@/lib/store";
+import { Play, Loader2 } from "lucide-react";
+import { type Game, useStore } from "@/lib/store";
+import { formatPrice } from "@/lib/utils";
+import { useState } from "react";
+import { toast } from "sonner";
 
 interface GameCardProps {
   game: Game;
@@ -12,27 +14,24 @@ interface GameCardProps {
 }
 
 export function GameCard({ game, variant = "default" }: GameCardProps) {
-  const { addToCart, cart, addToWishlist, removeFromWishlist, isInWishlist, isInLibrary, requireLogin } = useStore();
+  const { purchase, isInLibrary, requireLogin } = useStore();
+  const [buying, setBuying] = useState(false);
 
-  const inCart = cart.some((item) => item.game.id === game.id);
-  const inWishlist = isInWishlist(game.id);
   const inLibrary = isInLibrary(game.id);
 
-  const handleAction = (e: React.MouseEvent) => {
+  const handleBuy = async (e: React.MouseEvent) => {
     e.preventDefault(); e.stopPropagation();
-    if (inLibrary || inCart) return;
-    requireLogin(() => addToCart(game));
-  };
-
-  const handleWishlist = (e: React.MouseEvent) => {
-    e.preventDefault(); e.stopPropagation();
-    if (inWishlist) removeFromWishlist(game.id);
-    else requireLogin(() => addToWishlist(game.id));
-  };
-
-  const formatPrice = (price: number) => {
-    if (price === 0) return "Gratuito";
-    return new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(price);
+    if (inLibrary || buying) return;
+    if (!requireLogin()) return;
+    setBuying(true);
+    try {
+      await purchase(game);
+      toast.success(`${game.title} adicionado à sua biblioteca!`);
+    } catch {
+      toast.error("Erro ao comprar o jogo.");
+    } finally {
+      setBuying(false);
+    }
   };
 
   if (variant === "featured") {
@@ -121,11 +120,18 @@ export function GameCard({ game, variant = "default" }: GameCardProps) {
           </div>
 
           <button
-            onClick={handleAction}
-            className="flex-shrink-0 h-7 px-3 rounded-full text-[12px] font-semibold transition-all duration-150 bg-primary/12 text-primary hover:bg-primary hover:text-primary-foreground"
-            aria-label={inLibrary ? "Jogar" : inCart ? "No carrinho" : "Adicionar ao carrinho"}
+            onClick={handleBuy}
+            disabled={buying}
+            className="flex-shrink-0 h-7 px-3 rounded-full text-[12px] font-semibold transition-all duration-150 bg-primary/12 text-primary hover:bg-primary hover:text-primary-foreground disabled:opacity-60"
+            aria-label={inLibrary ? "Na biblioteca" : game.price === 0 ? "Obter" : "Comprar"}
           >
-            {inLibrary ? <Play className="w-3 h-3" /> : inCart ? <Check className="w-3 h-3" /> : game.price === 0 ? "Obter" : "Comprar"}
+            {inLibrary
+              ? <Play className="w-3 h-3" />
+              : buying
+              ? <Loader2 className="w-3 h-3 animate-spin" />
+              : game.price === 0
+              ? "Obter"
+              : "Comprar"}
           </button>
         </div>
       </div>

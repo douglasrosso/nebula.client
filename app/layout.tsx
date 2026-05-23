@@ -4,6 +4,7 @@ import { Analytics } from '@vercel/analytics/next'
 import { ThemeProvider } from '@/components/theme-provider'
 import { ConditionalHeader } from '@/components/conditional-header'
 import { StoreHydration } from '@/components/store-hydration'
+import { SignalRInitializer } from '@/components/signalr-initializer'
 import { Toaster } from '@/components/ui/sonner'
 import './globals.css'
 
@@ -26,8 +27,10 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
       <body className={`${inter.variable} font-sans antialiased min-h-screen bg-background text-foreground`} suppressHydrationWarning>
         <ThemeProvider attribute="class" defaultTheme="light" enableSystem={false}>
           <StoreHydration />
-          <ConditionalHeader />
-          {children}
+          <SignalRInitializer>
+            <ConditionalHeader />
+            {children}
+          </SignalRInitializer>
           <Toaster richColors position="top-right" />
           {process.env.NODE_ENV === 'production' && <Analytics />}
         </ThemeProvider>
