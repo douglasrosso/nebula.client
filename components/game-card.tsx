@@ -2,11 +2,11 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { Star, ShoppingCart, Heart, Check, Play } from "lucide-react";
-import { type Game } from "@/lib/games-data";
-import { useStore } from "@/lib/store";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
+import { Play, Loader2 } from "lucide-react";
+import { type Game, useStore } from "@/lib/store";
+import { formatPrice } from "@/lib/utils";
+import { useState } from "react";
+import { toast } from "sonner";
 
 interface GameCardProps {
   game: Game;
@@ -14,94 +14,54 @@ interface GameCardProps {
 }
 
 export function GameCard({ game, variant = "default" }: GameCardProps) {
-  const {
-    addToCart,
-    cart,
-    addToWishlist,
-    removeFromWishlist,
-    isInWishlist,
-    isInLibrary,
-  } = useStore();
+  const { purchase, isInLibrary, requireLogin } = useStore();
+  const [buying, setBuying] = useState(false);
 
-  const inCart = cart.some((item) => item.game.id === game.id);
-  const inWishlist = isInWishlist(game.id);
   const inLibrary = isInLibrary(game.id);
 
-  const handleAddToCart = (e: React.MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    if (!inCart && !inLibrary) {
-      addToCart(game);
+  const handleBuy = async (e: React.MouseEvent) => {
+    e.preventDefault(); e.stopPropagation();
+    if (inLibrary || buying) return;
+    if (!requireLogin()) return;
+    setBuying(true);
+    try {
+      await purchase(game);
+      toast.success(`${game.title} adicionado à sua biblioteca!`);
+    } catch {
+      toast.error("Erro ao comprar o jogo.");
+    } finally {
+      setBuying(false);
     }
-  };
-
-  const handleWishlist = (e: React.MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    if (inWishlist) {
-      removeFromWishlist(game.id);
-    } else {
-      addToWishlist(game.id);
-    }
-  };
-
-  const formatPrice = (price: number) => {
-    if (price === 0) return "Gratuito";
-    return new Intl.NumberFormat("pt-BR", {
-      style: "currency",
-      currency: "BRL",
-    }).format(price);
   };
 
   if (variant === "featured") {
     return (
-      <Link
-        href={`/jogo/${game.id}`}
-        className="group relative block overflow-hidden rounded-2xl glass glass-hover transition-all duration-300"
-      >
+      <Link href={`/jogo/${game.id}`} className="group relative block overflow-hidden rounded-2xl bg-surface-raised">
         <div className="relative aspect-[16/9] overflow-hidden">
           <Image
-            src={game.coverImage}
-            alt={game.title}
-            fill
-            className="object-cover transition-transform duration-500 group-hover:scale-105"
-            sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+            src={game.coverImage} alt={game.title} fill
+            className="object-cover transition-transform duration-700 group-hover:scale-[1.03]"
+            sizes="(max-width: 768px) 100vw, 50vw"
           />
-          <div className="absolute inset-0 bg-gradient-to-t from-background/90 via-background/20 to-transparent" />
-          
-          {/* Discount Badge */}
+          <div className="absolute inset-0" style={{ background: "linear-gradient(to top, oklch(0.05 0 0) 0%, transparent 60%)" }} />
           {game.discount && (
-            <Badge className="absolute top-4 left-4 bg-success text-success-foreground text-sm px-3 py-1">
+            <span className="absolute top-3 left-3 text-[12px] font-bold px-2.5 py-1 rounded-lg bg-success text-success-foreground">
               -{game.discount}%
-            </Badge>
+            </span>
           )}
-
-          {/* Content */}
-          <div className="absolute bottom-0 left-0 right-0 p-6">
-            <h3 className="text-2xl font-bold mb-2 text-balance">{game.title}</h3>
-            <p className="text-sm text-muted-foreground mb-4 line-clamp-2">
-              {game.description}
-            </p>
-
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                {game.originalPrice && (
-                  <span className="text-sm text-muted-foreground line-through">
-                    {formatPrice(game.originalPrice)}
-                  </span>
-                )}
-                <span className="text-xl font-bold text-primary">
-                  {formatPrice(game.price)}
-                </span>
-              </div>
-
-              <div className="flex items-center gap-2">
-                <div className="flex items-center gap-1">
-                  <Star className="w-4 h-4 fill-warning text-warning" />
-                  <span className="text-sm font-medium">{game.rating}</span>
-                </div>
-              </div>
+        </div>
+        <div className="absolute bottom-0 left-0 right-0 p-5">
+          <h3 className="text-[20px] font-bold text-white mb-1 line-clamp-1">{game.title}</h3>
+          <div className="flex items-center justify-between">
+            <div className="flex items-baseline gap-2">
+              {game.originalPrice && (
+                <span className="text-[13px] line-through text-white/50">{formatPrice(game.originalPrice)}</span>
+              )}
+              <span className="text-[17px] font-bold" style={{ color: game.price === 0 ? "var(--success)" : "var(--primary)" }}>
+                {formatPrice(game.price)}
+              </span>
             </div>
+            <span className="text-[13px] text-white/60">{game.positivePercentage}% positivas</span>
           </div>
         </div>
       </Link>
@@ -110,33 +70,13 @@ export function GameCard({ game, variant = "default" }: GameCardProps) {
 
   if (variant === "compact") {
     return (
-      <Link
-        href={`/jogo/${game.id}`}
-        className="group flex gap-4 p-3 rounded-xl glass glass-hover transition-all duration-200"
-      >
-        <div className="relative w-24 h-14 rounded-lg overflow-hidden flex-shrink-0">
-          <Image
-            src={game.coverImage}
-            alt={game.title}
-            fill
-            className="object-cover"
-            sizes="96px"
-          />
+      <Link href={`/jogo/${game.id}`} className="group flex gap-3 p-3 rounded-xl bg-surface-raised transition-colors">
+        <div className="relative w-20 h-12 rounded-lg overflow-hidden flex-shrink-0">
+          <Image src={game.coverImage} alt={game.title} fill className="object-cover" sizes="80px" />
         </div>
-        <div className="flex-1 min-w-0">
-          <h3 className="font-semibold truncate group-hover:text-primary transition-colors">
-            {game.title}
-          </h3>
-          <div className="flex items-center gap-2 mt-1">
-            {game.discount && (
-              <Badge variant="secondary" className="text-xs bg-success/20 text-success">
-                -{game.discount}%
-              </Badge>
-            )}
-            <span className="text-sm font-medium text-primary">
-              {formatPrice(game.price)}
-            </span>
-          </div>
+        <div className="flex-1 min-w-0 flex flex-col justify-center">
+          <h3 className="text-[13px] font-semibold text-foreground truncate">{game.title}</h3>
+          <span className="text-[12px] font-medium mt-0.5 text-primary">{formatPrice(game.price)}</span>
         </div>
       </Link>
     );
@@ -145,107 +85,54 @@ export function GameCard({ game, variant = "default" }: GameCardProps) {
   return (
     <Link
       href={`/jogo/${game.id}`}
-      className="group relative flex flex-col overflow-hidden rounded-2xl glass transition-all duration-300 hover:shadow-xl hover:shadow-primary/10 hover:-translate-y-1"
+      className="group flex flex-col rounded-xl overflow-hidden transition-transform duration-200 hover:-translate-y-0.5 bg-surface-raised"
     >
-      {/* Image Container */}
       <div className="relative aspect-[460/215] overflow-hidden">
         <Image
-          src={game.coverImage}
-          alt={game.title}
-          fill
-          className="object-cover transition-transform duration-500 group-hover:scale-105"
+          src={game.coverImage} alt={game.title} fill
+          className="object-cover transition-transform duration-500 group-hover:scale-[1.04]"
           sizes="(max-width: 640px) 100vw, (max-width: 768px) 50vw, (max-width: 1024px) 33vw, 25vw"
         />
-        
-        {/* Overlay on hover */}
-        <div className="absolute inset-0 bg-background/60 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center gap-2">
-          {inLibrary ? (
-            <Button size="sm" className="gap-2">
-              <Play className="w-4 h-4" />
-              Jogar
-            </Button>
-          ) : (
-            <>
-              <Button
-                size="icon"
-                variant="secondary"
-                onClick={handleWishlist}
-                aria-label={inWishlist ? "Remover da lista de desejos" : "Adicionar à lista de desejos"}
-                className={inWishlist ? "text-destructive" : ""}
-              >
-                <Heart className={`w-4 h-4 ${inWishlist ? "fill-current" : ""}`} />
-              </Button>
-              <Button
-                size="sm"
-                onClick={handleAddToCart}
-                disabled={inCart}
-                className="gap-2"
-              >
-                {inCart ? (
-                  <>
-                    <Check className="w-4 h-4" />
-                    No carrinho
-                  </>
-                ) : (
-                  <>
-                    <ShoppingCart className="w-4 h-4" />
-                    Comprar
-                  </>
-                )}
-              </Button>
-            </>
-          )}
-        </div>
-
-        {/* Badges */}
-        <div className="absolute top-2 left-2 flex flex-col gap-1">
-          {game.discount && (
-            <Badge className="bg-success text-success-foreground text-xs">
-              -{game.discount}%
-            </Badge>
-          )}
-          {inLibrary && (
-            <Badge className="bg-primary text-primary-foreground text-xs">
-              Na biblioteca
-            </Badge>
-          )}
-        </div>
+        {game.discount && (
+          <span className="absolute top-2 left-2 text-[11px] font-bold px-2 py-0.5 rounded-md bg-success text-success-foreground">
+            -{game.discount}%
+          </span>
+        )}
+        {inLibrary && (
+          <span className="absolute top-2 right-2 text-[11px] font-bold px-2 py-0.5 rounded-md bg-primary/90 text-primary-foreground">
+            Biblioteca
+          </span>
+        )}
       </div>
 
-      {/* Content */}
-      <div className="flex flex-col flex-1 p-4">
-        <h3 className="font-semibold text-sm mb-1 line-clamp-1 group-hover:text-primary transition-colors">
-          {game.title}
-        </h3>
-        
-        {/* Tags */}
-        <div className="flex flex-wrap gap-1 mb-3">
-          {game.genres.slice(0, 2).map((genre) => (
-            <Badge key={genre} variant="secondary" className="text-xs px-2 py-0">
-              {genre}
-            </Badge>
-          ))}
-        </div>
+      <div className="flex flex-col flex-1 p-3">
+        <h3 className="text-[13px] font-semibold text-foreground line-clamp-1 mb-1">{game.title}</h3>
+        <p className="text-[11px] mb-3 text-text-tertiary">{game.genres.slice(0, 2).join(" · ")}</p>
 
-        {/* Rating & Price */}
-        <div className="flex items-center justify-between mt-auto">
-          <div className="flex items-center gap-1">
-            <Star className="w-3.5 h-3.5 fill-warning text-warning" />
-            <span className="text-xs text-muted-foreground">
-              {game.positivePercentage}% positivas
-            </span>
-          </div>
-          
-          <div className="flex items-center gap-2">
+        <div className="mt-auto flex items-end justify-between gap-2">
+          <div className="min-w-0">
             {game.originalPrice && (
-              <span className="text-xs text-muted-foreground line-through">
-                {formatPrice(game.originalPrice)}
-              </span>
+              <span className="text-[11px] line-through block text-text-tertiary">{formatPrice(game.originalPrice)}</span>
             )}
-            <span className={`text-sm font-bold ${game.price === 0 ? "text-success" : "text-primary"}`}>
+            <span className={`text-[13px] font-bold ${game.price === 0 ? "text-success" : "text-primary"}`}>
               {formatPrice(game.price)}
             </span>
           </div>
+
+          <button
+            onClick={handleBuy}
+            disabled={buying}
+            className="flex-shrink-0 h-7 px-3 rounded-full text-[12px] font-semibold transition-all duration-150 bg-primary/12 text-primary hover:bg-primary hover:text-primary-foreground disabled:opacity-60"
+            aria-label={inLibrary ? "Na biblioteca" : game.price === 0 ? "Obter" : "Comprar"}
+          >
+            {inLibrary
+              ? <Play className="w-3 h-3" />
+              : buying
+              ? <Loader2 className="w-3 h-3 animate-spin" />
+              : game.price === 0
+              ? "Obter"
+              : "Comprar"}
+          </button>
         </div>
       </div>
     </Link>

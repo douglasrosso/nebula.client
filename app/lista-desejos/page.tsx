@@ -1,223 +1,167 @@
 "use client";
 
+import { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { games } from "@/lib/games-data";
 import { useStore } from "@/lib/store";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import {
-  Heart,
-  ShoppingCart,
-  Trash2,
-  ArrowRight,
-  Bell,
-  BellOff,
-} from "lucide-react";
+import { useGames } from "@/lib/hooks/useGames";
+import { AuthGuard } from "@/components/auth-guard";
+import { Heart, Trash2, ArrowRight, Check, Loader2 } from "lucide-react";
+import { toast } from "sonner";
+import { formatPrice } from "@/lib/utils";
 
 export default function WishlistPage() {
-  const { wishlist, removeFromWishlist, addToCart, cart } = useStore();
-  const wishlistGames = games.filter((g) => wishlist.includes(g.id));
+  const { wishlist, removeFromWishlist, apiGames, purchase, isInLibrary } = useStore();
+  const [buyingId, setBuyingId] = useState<string | null>(null);
 
-  const formatPrice = (price: number) => {
-    if (price === 0) return "Gratuito";
-    return new Intl.NumberFormat("pt-BR", {
-      style: "currency",
-      currency: "BRL",
-    }).format(price);
-  };
+  useGames({ pageSize: 200 });
 
-  if (wishlistGames.length === 0) {
-    return (
-      <main id="main-content" className="min-h-screen pt-20 lg:pt-24 pb-12">
-        <div className="container mx-auto px-4">
-          <div className="max-w-2xl mx-auto text-center py-16">
-            <div className="w-20 h-20 rounded-full bg-secondary/50 flex items-center justify-center mx-auto mb-6">
-              <Heart className="w-10 h-10 text-muted-foreground" />
-            </div>
-            <h1 className="text-2xl font-bold mb-4">
-              Sua lista de desejos está vazia
-            </h1>
-            <p className="text-muted-foreground mb-8">
-              Adicione jogos à sua lista de desejos para acompanhar promoções e
-              lançamentos.
-            </p>
-            <Link href="/loja">
-              <Button size="lg" className="gap-2">
-                Explorar loja
-                <ArrowRight className="w-4 h-4" />
-              </Button>
-            </Link>
-          </div>
-        </div>
-      </main>
-    );
+  const wishlistGames = apiGames.filter((g) => wishlist.includes(g.id));
+  const totalValue = wishlistGames.reduce((t, g) => t + g.price, 0);
+  const totalSavings = wishlistGames.reduce((t, g) => (g.originalPrice ? t + (g.originalPrice - g.price) : t), 0);
+
+  async function handleBuy(game: typeof wishlistGames[number]) {
+    setBuyingId(game.id);
+    try {
+      await purchase(game);
+      toast.success(`${game.title} adicionado à biblioteca!`);
+    } catch {
+      toast.error("Erro ao comprar jogo. Tente novamente.");
+    } finally {
+      setBuyingId(null);
+    }
   }
 
-  const totalValue = wishlistGames.reduce((total, game) => total + game.price, 0);
-  const totalSavings = wishlistGames.reduce((total, game) => {
-    if (game.originalPrice) {
-      return total + (game.originalPrice - game.price);
-    }
-    return total;
-  }, 0);
-
   return (
-    <main id="main-content" className="min-h-screen pt-20 lg:pt-24 pb-12">
-      <div className="container mx-auto px-4">
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
-          <div>
-            <h1 className="text-3xl font-bold mb-2">Lista de Desejos</h1>
-            <p className="text-muted-foreground">
-              {wishlistGames.length} jogos salvos
-            </p>
-          </div>
+    <AuthGuard>
+      <main id="main-content" className="min-h-screen pt-20 pb-16">
+        <div className="container mx-auto px-4 lg:px-6">
 
-          {/* Stats */}
-          <div className="flex gap-6">
-            <div className="text-right">
-              <div className="text-sm text-muted-foreground">Valor total</div>
-              <div className="text-xl font-bold text-primary">
-                {formatPrice(totalValue)}
+          {wishlistGames.length === 0 ? (
+            <div className="max-w-sm mx-auto text-center py-20">
+              <div className="w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-5 bg-surface-inset">
+                <Heart className="w-8 h-8 text-muted-foreground" />
               </div>
-            </div>
-            {totalSavings > 0 && (
-              <div className="text-right">
-                <div className="text-sm text-muted-foreground">
-                  Economia atual
-                </div>
-                <div className="text-xl font-bold text-success">
-                  {formatPrice(totalSavings)}
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
-
-        <div className="space-y-4">
-          {wishlistGames.map((game, index) => {
-            const inCart = cart.some((item) => item.game.id === game.id);
-
-            return (
-              <article
-                key={game.id}
-                className="glass rounded-2xl p-4 lg:p-6 flex flex-col sm:flex-row gap-4 animate-fade-in"
-                style={{ animationDelay: `${index * 50}ms` }}
+              <p className="text-[20px] font-bold text-foreground mb-2">Lista de desejos vazia</p>
+              <p className="text-[15px] mb-8 text-muted-foreground">
+                Adicione jogos à sua lista para acompanhar promoções e lançamentos.
+              </p>
+              <Link
+                href="/loja"
+                className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-[15px] font-semibold text-primary-foreground bg-primary transition-opacity hover:opacity-80"
               >
-                {/* Image */}
-                <Link
-                  href={`/jogo/${game.id}`}
-                  className="relative w-full sm:w-48 lg:w-64 aspect-video sm:aspect-[460/215] rounded-xl overflow-hidden flex-shrink-0"
-                >
-                  <Image
-                    src={game.coverImage}
-                    alt={game.title}
-                    fill
-                    className="object-cover hover:scale-105 transition-transform duration-300"
-                    sizes="(max-width: 640px) 100vw, (max-width: 1024px) 192px, 256px"
-                  />
-                  {game.discount && (
-                    <Badge className="absolute top-2 left-2 bg-success text-success-foreground">
-                      -{game.discount}%
-                    </Badge>
-                  )}
-                </Link>
-
-                {/* Info */}
-                <div className="flex-1 flex flex-col">
-                  <div className="flex items-start justify-between gap-4">
-                    <div>
-                      <Link
-                        href={`/jogo/${game.id}`}
-                        className="text-lg font-semibold hover:text-primary transition-colors"
-                      >
-                        {game.title}
-                      </Link>
-                      <p className="text-sm text-muted-foreground mt-1">
-                        {game.developer}
-                      </p>
-                    </div>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => removeFromWishlist(game.id)}
-                      className="text-muted-foreground hover:text-destructive flex-shrink-0"
-                      aria-label={`Remover ${game.title} da lista de desejos`}
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </Button>
-                  </div>
-
-                  {/* Tags */}
-                  <div className="flex flex-wrap gap-1 mt-2">
-                    {game.genres.slice(0, 3).map((genre) => (
-                      <Badge key={genre} variant="secondary" className="text-xs">
-                        {genre}
-                      </Badge>
-                    ))}
-                  </div>
-
-                  {/* Description */}
-                  <p className="text-sm text-muted-foreground mt-3 line-clamp-2 hidden lg:block">
-                    {game.description}
+                Explorar loja <ArrowRight className="w-4 h-4" />
+              </Link>
+            </div>
+          ) : (
+            <>
+              <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4 mb-8">
+                <div>
+                  <h1 className="text-[28px] font-bold tracking-tight text-foreground">Lista de Desejos</h1>
+                  <p className="text-[15px] mt-0.5 text-muted-foreground">
+                    {wishlistGames.length} {wishlistGames.length === 1 ? "jogo" : "jogos"} salvos
                   </p>
-
-                  {/* Footer */}
-                  <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mt-auto pt-4">
-                    {/* Price */}
-                    <div className="flex items-baseline gap-2">
-                      {game.originalPrice && (
-                        <span className="text-sm text-muted-foreground line-through">
-                          {formatPrice(game.originalPrice)}
-                        </span>
-                      )}
-                      <span
-                        className={`text-xl font-bold ${
-                          game.price === 0 ? "text-success" : "text-primary"
-                        }`}
-                      >
-                        {formatPrice(game.price)}
-                      </span>
-                    </div>
-
-                    {/* Actions */}
-                    <div className="flex gap-2 w-full sm:w-auto">
-                      <Button
-                        onClick={() => addToCart(game)}
-                        disabled={inCart}
-                        className="flex-1 sm:flex-initial gap-2"
-                      >
-                        <ShoppingCart className="w-4 h-4" />
-                        {inCart ? "No carrinho" : "Adicionar"}
-                      </Button>
-                    </div>
-                  </div>
                 </div>
-              </article>
-            );
-          })}
-        </div>
+                <div className="flex gap-6">
+                  <div className="text-right">
+                    <p className="text-[11px] font-semibold uppercase tracking-wider mb-0.5 text-text-tertiary">Valor total</p>
+                    <p className="text-[20px] font-bold text-primary">{formatPrice(totalValue)}</p>
+                  </div>
+                  {totalSavings > 0 && (
+                    <div className="text-right">
+                      <p className="text-[11px] font-semibold uppercase tracking-wider mb-0.5 text-text-tertiary">Economia</p>
+                      <p className="text-[20px] font-bold text-success">{formatPrice(totalSavings)}</p>
+                    </div>
+                  )}
+                </div>
+              </div>
 
-        {/* Add all to cart */}
-        {wishlistGames.length > 1 && (
-          <div className="mt-8 flex justify-center">
-            <Button
-              size="lg"
-              onClick={() => {
-                wishlistGames.forEach((game) => {
-                  if (!cart.some((item) => item.game.id === game.id)) {
-                    addToCart(game);
-                  }
-                });
-              }}
-              className="gap-2"
-            >
-              <ShoppingCart className="w-5 h-5" />
-              Adicionar todos ao carrinho ({formatPrice(totalValue)})
-            </Button>
-          </div>
-        )}
-      </div>
-    </main>
+              <div className="rounded-2xl overflow-hidden bg-surface-base">
+                {wishlistGames.map((game, i) => {
+                  const owned = isInLibrary(game.id);
+                  const buying = buyingId === game.id;
+                  return (
+                    <article
+                      key={game.id}
+                      className={`flex flex-col sm:flex-row gap-4 p-4 ${i > 0 ? "border-t border-border" : ""}`}
+                    >
+                      <Link href={`/jogo/${game.id}`} className="relative w-full sm:w-48 aspect-video sm:aspect-[460/215] rounded-xl overflow-hidden flex-shrink-0 group">
+                        <Image
+                          src={game.coverImage}
+                          alt={game.title}
+                          fill
+                          className="object-cover transition-transform duration-300 group-hover:scale-[1.04]"
+                          sizes="(max-width: 640px) 100vw, 192px"
+                        />
+                        {game.discount && (
+                          <span className="absolute top-2 left-2 text-[11px] font-bold px-2 py-0.5 rounded-md bg-success text-success-foreground">
+                            -{game.discount}%
+                          </span>
+                        )}
+                      </Link>
+
+                      <div className="flex-1 flex flex-col">
+                        <div className="flex items-start justify-between gap-3">
+                          <div>
+                            <Link href={`/jogo/${game.id}`} className="text-[17px] font-semibold text-foreground hover:opacity-70 transition-opacity">
+                              {game.title}
+                            </Link>
+                            <p className="text-[13px] mt-0.5 text-muted-foreground">{game.developer}</p>
+                            <div className="flex flex-wrap gap-1.5 mt-2">
+                              {game.genres.slice(0, 3).map((genre) => (
+                                <span key={genre} className="text-[11px] px-2 py-0.5 rounded-md bg-surface-inset text-muted-foreground">
+                                  {genre}
+                                </span>
+                              ))}
+                            </div>
+                          </div>
+                          <button
+                            onClick={() => removeFromWishlist(game.id)}
+                            className="p-1.5 rounded-lg transition-colors flex-shrink-0 text-text-tertiary hover:text-destructive"
+                            aria-label={`Remover ${game.title}`}
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
+
+                        <p className="text-[13px] mt-3 line-clamp-2 hidden lg:block text-muted-foreground">
+                          {game.description}
+                        </p>
+
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mt-auto pt-4">
+                          <div className="flex items-baseline gap-2">
+                            {game.originalPrice && (
+                              <span className="text-[13px] line-through text-text-tertiary">
+                                {formatPrice(game.originalPrice)}
+                              </span>
+                            )}
+                            <span className={`text-[20px] font-bold ${game.price === 0 ? "text-success" : "text-primary"}`}>
+                              {formatPrice(game.price)}
+                            </span>
+                          </div>
+                          {owned ? (
+                            <span className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-[14px] font-semibold bg-surface-inset text-muted-foreground">
+                              <Check className="w-4 h-4" /> Na biblioteca
+                            </span>
+                          ) : (
+                            <button
+                              onClick={() => handleBuy(game)}
+                              disabled={buying}
+                              className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-[14px] font-semibold transition-opacity disabled:opacity-60 bg-primary text-primary-foreground hover:opacity-80"
+                            >
+                              {buying ? <Loader2 className="w-4 h-4 animate-spin" /> : "Comprar"}
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    </article>
+                  );
+                })}
+              </div>
+            </>
+          )}
+        </div>
+      </main>
+    </AuthGuard>
   );
 }
