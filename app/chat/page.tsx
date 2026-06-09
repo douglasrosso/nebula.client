@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef, useCallback, useMemo, Fragment } from "react";
+import styled from "styled-components";
 import { useStore } from "@/lib/store";
 import { friendsApi, messagesApi } from "@/lib/api";
 import { useSignalRContext } from "@/contexts/signalr-context";
@@ -14,21 +15,499 @@ import {
 import { toast } from "sonner";
 import { avatarUrl, formatTime } from "@/lib/utils";
 
+/* ─── Styled ─── */
+const MainPage = styled.main`
+  min-height: 100vh;
+  padding-top: 4rem;
+  padding-bottom: 0;
+`;
+
+const Container = styled.div`
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 1.5rem 1rem;
+  @media (min-width: 1024px) { padding: 1.5rem 1.5rem; }
+`;
+
+const ChatLayout = styled.div`
+  display: flex;
+  height: calc(100vh - 7rem);
+  border-radius: 1rem;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  background-color: var(--surface-base);
+`;
+
+/* Sidebar */
+const Sidebar = styled.div`
+  width: 18rem;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  border-right: 1px solid var(--border);
+`;
+
+const SidebarHeader = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.875rem 1rem;
+  border-bottom: 1px solid var(--border);
+`;
+
+const SidebarTitle = styled.h1`
+  font-size: 1.0625rem;
+  font-weight: 700;
+  color: var(--foreground);
+  margin: 0;
+`;
+
+const ConnectionStatus = styled.span<{ $connected?: boolean }>`
+  color: ${({ $connected }) => $connected ? "var(--success)" : "var(--muted-foreground)"};
+  display: flex;
+  align-items: center;
+`;
+
+const TabsRow = styled.div`
+  display: flex;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+`;
+
+const TabButton = styled.button<{ $active?: boolean }>`
+  flex: 1;
+  padding: 0.625rem;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  transition: all 150ms;
+  border: none;
+  background: none;
+  cursor: pointer;
+  color: ${({ $active }) => $active ? "var(--primary)" : "var(--muted-foreground)"};
+  border-bottom: ${({ $active }) => $active ? "2px solid var(--primary)" : "2px solid transparent"};
+  &:hover { color: ${({ $active }) => $active ? "var(--primary)" : "var(--foreground)"}; }
+`;
+
+const TabBadge = styled.span`
+  margin-left: 0.25rem;
+  font-size: 0.625rem;
+  background-color: var(--primary);
+  color: var(--primary-foreground);
+  border-radius: 9999px;
+  padding: 0.125rem 0.375rem;
+`;
+
+const TabContent = styled.div`
+  flex: 1;
+  overflow-y: auto;
+`;
+
+/* Friends tab */
+const EmptyFriends = styled.div`
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  color: var(--muted-foreground);
+  font-size: 0.8125rem;
+  gap: 0.5rem;
+`;
+
+const FriendButton = styled.button<{ $selected?: boolean }>`
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem 1rem;
+  transition: background-color 150ms;
+  text-align: left;
+  border: none;
+  cursor: pointer;
+  background-color: ${({ $selected }) => $selected ? "color-mix(in oklch, var(--primary) 10%, transparent)" : "transparent"};
+  &:hover { background-color: ${({ $selected }) => $selected ? "color-mix(in oklch, var(--primary) 10%, transparent)" : "var(--surface-raised)"}; }
+`;
+
+const FriendInfo = styled.div`
+  flex: 1;
+  min-width: 0;
+`;
+
+const FriendName = styled.p`
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--foreground);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  margin: 0;
+`;
+
+const FriendHandle = styled.p`
+  font-size: 0.6875rem;
+  color: var(--muted-foreground);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  margin: 0;
+`;
+
+const UnreadBadge = styled.span`
+  flex-shrink: 0;
+  min-width: 1.125rem;
+  height: 1.125rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 9999px;
+  background-color: var(--primary);
+  color: var(--primary-foreground);
+  font-size: 0.625rem;
+  font-weight: 700;
+  padding: 0 0.25rem;
+`;
+
+/* Requests tab */
+const EmptyRequests = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  font-size: 0.8125rem;
+  color: var(--muted-foreground);
+`;
+
+const RequestItem = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid var(--border);
+  &:last-child { border-bottom: none; }
+`;
+
+const RequestActions = styled.div`
+  display: flex;
+  gap: 0.25rem;
+  flex-shrink: 0;
+`;
+
+const AcceptButton = styled.button`
+  padding: 0.375rem;
+  border-radius: 0.5rem;
+  border: none;
+  cursor: pointer;
+  background-color: color-mix(in oklch, var(--primary) 10%, transparent);
+  color: var(--primary);
+  transition: all 150ms;
+  &:hover { background-color: var(--primary); color: var(--primary-foreground); }
+`;
+
+const DeclineButton = styled.button`
+  padding: 0.375rem;
+  border-radius: 0.5rem;
+  border: none;
+  cursor: pointer;
+  background-color: color-mix(in oklch, var(--destructive) 10%, transparent);
+  color: var(--destructive);
+  transition: all 150ms;
+  &:hover { background-color: var(--destructive); color: var(--destructive-foreground); }
+`;
+
+/* Add friend tab */
+const AddFriendPanel = styled.div`
+  display: flex;
+  flex-direction: column;
+`;
+
+const SearchPanel = styled.div`
+  padding: 0.75rem;
+  border-bottom: 1px solid var(--border);
+`;
+
+const SearchInputWrapper = styled.div`
+  position: relative;
+`;
+
+const SearchIconWrapper = styled.span`
+  position: absolute;
+  left: 0.75rem;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--muted-foreground);
+  pointer-events: none;
+  display: flex;
+  align-items: center;
+`;
+
+const SearchInputField = styled.input`
+  width: 100%;
+  height: 2.25rem;
+  padding-left: 2.25rem;
+  padding-right: 0.75rem;
+  border-radius: 0.5rem;
+  font-size: 0.8125rem;
+  background-color: var(--surface-raised);
+  border: 1px solid var(--border);
+  outline: none;
+  color: var(--foreground);
+  &::placeholder { color: var(--text-tertiary); }
+`;
+
+const SearchCenter = styled.div`
+  display: flex;
+  justify-content: center;
+  padding: 1.5rem 0;
+`;
+
+const SearchHint = styled.p`
+  padding: 1.25rem;
+  text-align: center;
+  font-size: 0.75rem;
+  color: var(--muted-foreground);
+  margin: 0;
+`;
+
+const SearchResultItem = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid var(--border);
+  &:last-child { border-bottom: none; }
+`;
+
+const UserStatusBadge = styled.span`
+  flex-shrink: 0;
+  font-size: 0.6875rem;
+  padding: 0.25rem 0.5rem;
+  border-radius: 0.5rem;
+  background-color: var(--surface-inset);
+  color: var(--muted-foreground);
+`;
+
+const SentBadge = styled.span`
+  flex-shrink: 0;
+  font-size: 0.6875rem;
+  padding: 0.25rem 0.5rem;
+  border-radius: 0.5rem;
+  background-color: color-mix(in oklch, var(--primary) 10%, transparent);
+  color: var(--primary);
+`;
+
+const AcceptSmallButton = styled.button`
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-size: 0.6875rem;
+  padding: 0.25rem 0.5rem;
+  border-radius: 0.5rem;
+  border: none;
+  cursor: pointer;
+  background-color: color-mix(in oklch, var(--success) 10%, transparent);
+  color: var(--success);
+  transition: all 150ms;
+  &:hover { background-color: var(--success); color: white; }
+`;
+
+const AddButton = styled.button`
+  flex-shrink: 0;
+  padding: 0.375rem;
+  border-radius: 0.5rem;
+  border: none;
+  cursor: pointer;
+  background-color: color-mix(in oklch, var(--primary) 10%, transparent);
+  color: var(--primary);
+  transition: all 150ms;
+  &:hover { background-color: var(--primary); color: var(--primary-foreground); }
+`;
+
+/* Chat area */
+const ChatArea = styled.div`
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+`;
+
+const ChatHeader = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.875rem 1.25rem;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+`;
+
+const ChatHeaderInfo = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+`;
+
+const ChatFriendName = styled.p`
+  font-size: 0.9375rem;
+  font-weight: 600;
+  color: var(--foreground);
+  line-height: 1.2;
+  margin: 0;
+`;
+
+const ChatFriendHandle = styled.p`
+  font-size: 0.75rem;
+  color: var(--muted-foreground);
+  margin: 0;
+`;
+
+const RemoveFriendButton = styled.button`
+  font-size: 0.75rem;
+  color: var(--destructive);
+  background: none;
+  border: none;
+  cursor: pointer;
+  flex-shrink: 0;
+  &:hover { text-decoration: underline; }
+`;
+
+const MessagesArea = styled.div`
+  flex: 1;
+  overflow-y: auto;
+  padding: 1rem 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.625rem;
+`;
+
+const UnreadDivider = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.25rem 0;
+`;
+
+const DividerLine = styled.div`
+  flex: 1;
+  height: 1px;
+  background-color: color-mix(in oklch, var(--primary) 30%, transparent);
+`;
+
+const DividerLabel = styled.span`
+  font-size: 0.6875rem;
+  color: var(--primary);
+  font-weight: 500;
+  flex-shrink: 0;
+`;
+
+const MessageRow = styled.div<{ $mine?: boolean }>`
+  display: flex;
+  justify-content: ${({ $mine }) => $mine ? "flex-end" : "flex-start"};
+`;
+
+const MessageBubble = styled.div<{ $mine?: boolean }>`
+  max-width: 70%;
+  padding: 0.625rem 1rem;
+  border-radius: 1rem;
+  font-size: 0.875rem;
+  line-height: 1.625;
+  background-color: ${({ $mine }) => $mine ? "var(--primary)" : "var(--surface-raised)"};
+  color: ${({ $mine }) => $mine ? "var(--primary-foreground)" : "var(--foreground)"};
+  border-bottom-right-radius: ${({ $mine }) => $mine ? "0.25rem" : "1rem"};
+  border-bottom-left-radius: ${({ $mine }) => $mine ? "1rem" : "0.25rem"};
+`;
+
+const MessageText = styled.p`
+  overflow-wrap: break-word;
+  margin: 0;
+`;
+
+const MessageMeta = styled.p<{ $mine?: boolean }>`
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-size: 0.625rem;
+  margin: 0.25rem 0 0;
+  color: ${({ $mine }) => $mine ? "rgba(255,255,255,0.6)" : "var(--muted-foreground)"};
+`;
+
+const InputArea = styled.div`
+  padding: 1rem 1.25rem;
+  border-top: 1px solid var(--border);
+  flex-shrink: 0;
+`;
+
+const InputRow = styled.div`
+  display: flex;
+  gap: 0.75rem;
+  align-items: center;
+`;
+
+const MessageInput = styled.input`
+  flex: 1;
+  height: 2.75rem;
+  padding: 0 1rem;
+  border-radius: 0.75rem;
+  font-size: 0.875rem;
+  background-color: var(--surface-raised);
+  border: 1px solid var(--border);
+  outline: none;
+  color: var(--foreground);
+  &::placeholder { color: var(--text-tertiary); }
+  &:disabled { opacity: 0.5; }
+`;
+
+const SendButton = styled.button`
+  height: 2.75rem;
+  width: 2.75rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 0.75rem;
+  background-color: var(--primary);
+  color: var(--primary-foreground);
+  border: none;
+  cursor: pointer;
+  transition: opacity 150ms;
+  flex-shrink: 0;
+  &:hover:not(:disabled) { opacity: 0.8; }
+  &:disabled { opacity: 0.4; cursor: not-allowed; }
+`;
+
+const EmptyChat = styled.div`
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 2rem;
+  gap: 0.75rem;
+`;
+
+const EmptyChatTitle = styled.p`
+  font-size: 1.0625rem;
+  font-weight: 600;
+  color: var(--foreground);
+  margin: 0;
+`;
+
+const EmptyChatSubtitle = styled.p`
+  font-size: 0.875rem;
+  color: var(--muted-foreground);
+  margin: 0;
+`;
+
 export default function ChatPage() {
   const { user, unreadByFriend, markConversationRead, unreadFriendRequests, clearFriendRequests } = useStore();
 
-  // sidebar state
   const [tab, setTab] = useState<"friends" | "requests" | "add">("friends");
   const [friends, setFriends] = useState<ApiFriend[]>([]);
   const [requests, setRequests] = useState<ApiFriend[]>([]);
-
-  // add-friend search
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState<ApiFriend[]>([]);
   const [searching, setSearching] = useState(false);
   const searchDebounce = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  // chat state
   const [selectedFriend, setSelectedFriend] = useState<ApiFriend | null>(null);
   const [messages, setMessages] = useState<ApiMessage[]>([]);
   const [loadingMsgs, setLoadingMsgs] = useState(false);
@@ -88,17 +567,13 @@ export default function ChatPage() {
   useEffect(() => onMessagesRead(handleMessagesRead), [onMessagesRead, handleMessagesRead]);
   useEffect(() => onFriendRequestReceived(handleFriendRequestReceived), [onFriendRequestReceived, handleFriendRequestReceived]);
   useEffect(() => onFriendRequestAccepted(handleFriendRequestAccepted), [onFriendRequestAccepted, handleFriendRequestAccepted]);
-
   useEffect(() => { selectedFriendRef.current = selectedFriend; }, [selectedFriend]);
-
   useEffect(() => {
     const instant = bulkLoadRef.current;
     bulkLoadRef.current = false;
     messagesEndRef.current?.scrollIntoView({ behavior: instant ? "instant" : "smooth" });
   }, [messages]);
-
   useEffect(() => { reloadFriends(); }, []);
-
   useEffect(() => () => {
     if (searchDebounce.current) clearTimeout(searchDebounce.current);
     if (dividerTimeoutRef.current) clearTimeout(dividerTimeoutRef.current);
@@ -122,8 +597,7 @@ export default function ChatPage() {
     const friendId = selectedFriend.id;
     setMessages([]);
     setLoadingMsgs(true);
-    messagesApi
-      .getConversation(friendId)
+    messagesApi.getConversation(friendId)
       .then((msgs) => {
         bulkLoadRef.current = true;
         setMessages(msgs);
@@ -146,17 +620,10 @@ export default function ChatPage() {
   function handleSearchInput(val: string) {
     setSearchQuery(val);
     if (searchDebounce.current) clearTimeout(searchDebounce.current);
-
-    if (val.trim().length < 2) {
-      setSearchResults([]);
-      return;
-    }
-
+    if (val.trim().length < 2) { setSearchResults([]); return; }
     searchDebounce.current = setTimeout(async () => {
       setSearching(true);
-      try {
-        setSearchResults(await friendsApi.search(val.trim()));
-      } catch {}
+      try { setSearchResults(await friendsApi.search(val.trim())); } catch {}
       setSearching(false);
     }, 350);
   }
@@ -164,9 +631,7 @@ export default function ChatPage() {
   async function handleSendRequest(target: ApiFriend) {
     try {
       await friendsApi.add(target.id);
-      setSearchResults((prev) =>
-        prev.map((r) => r.id === target.id ? { ...r, status: "pending_sent" } : r)
-      );
+      setSearchResults((prev) => prev.map((r) => r.id === target.id ? { ...r, status: "pending_sent" } : r));
       toast.success(`Solicitação enviada para ${target.displayName}!`);
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Erro ao enviar solicitação.");
@@ -179,18 +644,14 @@ export default function ChatPage() {
       setRequests((prev) => prev.filter((r) => r.id !== requester.id));
       setFriends((prev) => [...prev, { ...requester, status: "accepted" }]);
       toast.success(`${requester.displayName} agora é seu amigo!`);
-    } catch {
-      toast.error("Erro ao aceitar solicitação.");
-    }
+    } catch { toast.error("Erro ao aceitar solicitação."); }
   }
 
   async function handleDecline(requester: ApiFriend) {
     try {
       await friendsApi.remove(requester.id);
       setRequests((prev) => prev.filter((r) => r.id !== requester.id));
-    } catch {
-      toast.error("Erro ao recusar solicitação.");
-    }
+    } catch { toast.error("Erro ao recusar solicitação."); }
   }
 
   async function handleRemoveFriend(friendId: string) {
@@ -200,9 +661,7 @@ export default function ChatPage() {
       markConversationRead(friendId);
       if (selectedFriend?.id === friendId) setSelectedFriend(null);
       toast.success("Amigo removido.");
-    } catch {
-      toast.error("Erro ao remover amigo.");
-    }
+    } catch { toast.error("Erro ao remover amigo."); }
   }
 
   const { firstUnreadIdx, unreadCount } = useMemo(() => {
@@ -226,7 +685,6 @@ export default function ChatPage() {
     setSending(true);
     try {
       await sendMessage(selectedFriend.id, content);
-      // backend echoes the sent message back via ReceiveMessage, so no local push needed
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Erro ao enviar mensagem.");
       setInput(content);
@@ -234,256 +692,182 @@ export default function ChatPage() {
       setSending(false);
     }
   }
+
   return (
     <AuthGuard>
-      <main id="main-content" className="min-h-screen pt-16 pb-0">
-        <div className="container mx-auto px-4 lg:px-6 py-6">
-          <div className="flex h-[calc(100vh-7rem)] rounded-2xl overflow-hidden border border-border bg-surface-base">
+      <MainPage id="main-content">
+        <Container>
+          <ChatLayout>
+            {/* Sidebar */}
+            <Sidebar>
+              <SidebarHeader>
+                <SidebarTitle>Chat</SidebarTitle>
+                <ConnectionStatus $connected={connected} title={connected ? "Conectado" : "Desconectado"}>
+                  {connected ? <Wifi style={{ width: "1rem", height: "1rem" }} /> : <WifiOff style={{ width: "1rem", height: "1rem" }} />}
+                </ConnectionStatus>
+              </SidebarHeader>
 
-            {/* ── Sidebar ───────────────────────────────────────── */}
-            <div className="w-72 flex-shrink-0 flex flex-col border-r border-border">
-
-              {/* Header */}
-              <div className="flex items-center justify-between px-4 py-3.5 border-b border-border">
-                <h1 className="text-[17px] font-bold text-foreground">Chat</h1>
-                <span
-                  title={connected ? "Conectado" : "Desconectado"}
-                  className={connected ? "text-success" : "text-muted-foreground"}
-                >
-                  {connected
-                    ? <Wifi className="w-4 h-4" />
-                    : <WifiOff className="w-4 h-4" />}
-                </span>
-              </div>
-
-              {/* Tabs */}
-              <div className="flex border-b border-border shrink-0">
-                {(
-                  [
-                    { key: "friends",  label: "Amigos",    badge: 0                    },
-                    { key: "requests", label: "Pedidos",   badge: unreadFriendRequests },
-                    { key: "add",      label: "Adicionar", badge: 0                    },
-                  ] as const
-                ).map((t) => (
-                  <button
+              <TabsRow>
+                {([
+                  { key: "friends", label: "Amigos", badge: 0 },
+                  { key: "requests", label: "Pedidos", badge: unreadFriendRequests },
+                  { key: "add", label: "Adicionar", badge: 0 },
+                ] as const).map((t) => (
+                  <TabButton
                     key={t.key}
-                    onClick={() => {
-                      setTab(t.key);
-                      if (t.key === "requests") clearFriendRequests();
-                    }}
-                    className={`flex-1 py-2.5 text-[11px] font-semibold transition-colors ${
-                      tab === t.key
-                        ? "text-primary border-b-2 border-primary"
-                        : "text-muted-foreground hover:text-foreground"
-                    }`}
+                    $active={tab === t.key}
+                    onClick={() => { setTab(t.key); if (t.key === "requests") clearFriendRequests(); }}
                   >
                     {t.label}
-                    {t.badge > 0 && (
-                      <span className="ml-1 text-[10px] bg-primary text-primary-foreground rounded-full px-1.5 py-0.5">
-                        {t.badge}
-                      </span>
-                    )}
-                  </button>
+                    {t.badge > 0 && <TabBadge>{t.badge}</TabBadge>}
+                  </TabButton>
                 ))}
-              </div>
+              </TabsRow>
 
-              {/* Tab content */}
-              <div className="flex-1 overflow-y-auto">
-
-                {/* FRIENDS */}
+              <TabContent>
                 {tab === "friends" && (
                   <>
                     {friends.length === 0 ? (
-                      <div className="flex flex-col items-center justify-center h-full text-muted-foreground text-[13px] gap-2">
-                        <Users className="w-8 h-8 opacity-30" />
+                      <EmptyFriends>
+                        <Users style={{ width: "2rem", height: "2rem", opacity: 0.3 }} />
                         Nenhum amigo ainda.
-                      </div>
+                      </EmptyFriends>
                     ) : (
                       friends.map((f) => {
                         const friendUnread = unreadByFriend[f.id] ?? 0;
                         return (
-                          <button
-                            key={f.id}
-                            onClick={() => handleSelectFriend(f)}
-                            className={`w-full flex items-center gap-3 px-4 py-3 transition-colors text-left ${
-                              selectedFriend?.id === f.id
-                                ? "bg-primary/10"
-                                : "hover:bg-surface-raised"
-                            }`}
-                          >
-                            <Avatar className="w-9 h-9 shrink-0">
+                          <FriendButton key={f.id} onClick={() => handleSelectFriend(f)} $selected={selectedFriend?.id === f.id}>
+                            <Avatar style={{ width: "2.25rem", height: "2.25rem", flexShrink: 0 }}>
                               <AvatarImage src={avatarUrl(f)} alt={f.displayName} />
                               <AvatarFallback>{f.displayName[0]}</AvatarFallback>
                             </Avatar>
-                            <div className="flex-1 min-w-0">
-                              <p className="text-[13px] font-semibold text-foreground truncate">{f.displayName}</p>
-                              <p className="text-[11px] text-muted-foreground truncate">@{f.username}</p>
-                            </div>
+                            <FriendInfo>
+                              <FriendName>{f.displayName}</FriendName>
+                              <FriendHandle>@{f.username}</FriendHandle>
+                            </FriendInfo>
                             {friendUnread > 0 && (
-                              <span className="shrink-0 min-w-[18px] h-[18px] flex items-center justify-center rounded-full bg-primary text-primary-foreground text-[10px] font-bold px-1">
-                                {friendUnread > 99 ? "99+" : friendUnread}
-                              </span>
+                              <UnreadBadge>{friendUnread > 99 ? "99+" : friendUnread}</UnreadBadge>
                             )}
-                          </button>
+                          </FriendButton>
                         );
                       })
                     )}
                   </>
                 )}
 
-                {/* REQUESTS */}
                 {tab === "requests" && (
                   <>
                     {requests.length === 0 ? (
-                      <div className="flex items-center justify-center h-full text-[13px] text-muted-foreground">
-                        Nenhum pedido pendente.
-                      </div>
+                      <EmptyRequests>Nenhum pedido pendente.</EmptyRequests>
                     ) : (
                       requests.map((req) => (
-                        <div key={req.id} className="flex items-center gap-3 px-4 py-3 border-b border-border last:border-0">
-                          <Avatar className="w-9 h-9 shrink-0">
+                        <RequestItem key={req.id}>
+                          <Avatar style={{ width: "2.25rem", height: "2.25rem", flexShrink: 0 }}>
                             <AvatarImage src={avatarUrl(req)} alt={req.displayName} />
                             <AvatarFallback>{req.displayName[0]}</AvatarFallback>
                           </Avatar>
-                          <div className="flex-1 min-w-0">
-                            <p className="text-[13px] font-semibold text-foreground truncate">{req.displayName}</p>
-                            <p className="text-[11px] text-muted-foreground truncate">@{req.username}</p>
-                          </div>
-                          <div className="flex gap-1 shrink-0">
-                            <button
-                              onClick={() => handleAccept(req)}
-                              className="p-1.5 rounded-lg bg-primary/10 text-primary hover:bg-primary hover:text-primary-foreground transition-colors"
-                              aria-label="Aceitar"
-                            >
-                              <Check className="w-3.5 h-3.5" />
-                            </button>
-                            <button
-                              onClick={() => handleDecline(req)}
-                              className="p-1.5 rounded-lg bg-destructive/10 text-destructive hover:bg-destructive hover:text-destructive-foreground transition-colors"
-                              aria-label="Recusar"
-                            >
-                              <X className="w-3.5 h-3.5" />
-                            </button>
-                          </div>
-                        </div>
+                          <FriendInfo style={{ flex: 1, minWidth: 0 }}>
+                            <FriendName>{req.displayName}</FriendName>
+                            <FriendHandle>@{req.username}</FriendHandle>
+                          </FriendInfo>
+                          <RequestActions>
+                            <AcceptButton onClick={() => handleAccept(req)} aria-label="Aceitar">
+                              <Check style={{ width: "0.875rem", height: "0.875rem" }} />
+                            </AcceptButton>
+                            <DeclineButton onClick={() => handleDecline(req)} aria-label="Recusar">
+                              <X style={{ width: "0.875rem", height: "0.875rem" }} />
+                            </DeclineButton>
+                          </RequestActions>
+                        </RequestItem>
                       ))
                     )}
                   </>
                 )}
 
-                {/* ADD FRIEND */}
                 {tab === "add" && (
-                  <div className="flex flex-col">
-                    <div className="p-3 border-b border-border">
-                      <div className="relative">
-                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground pointer-events-none" />
-                        <input
+                  <AddFriendPanel>
+                    <SearchPanel>
+                      <SearchInputWrapper>
+                        <SearchIconWrapper>
+                          <Search style={{ width: "0.875rem", height: "0.875rem" }} />
+                        </SearchIconWrapper>
+                        <SearchInputField
                           type="text"
                           placeholder="Buscar por nome ou e-mail..."
                           value={searchQuery}
                           onChange={(e) => handleSearchInput(e.target.value)}
-                          className="w-full h-9 pl-9 pr-3 rounded-lg text-[13px] bg-surface-raised border border-border outline-none text-foreground placeholder:text-text-tertiary"
                           autoFocus
                         />
-                      </div>
-                    </div>
+                      </SearchInputWrapper>
+                    </SearchPanel>
 
                     {searching && (
-                      <div className="flex justify-center py-6">
-                        <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />
-                      </div>
+                      <SearchCenter>
+                        <Loader2 style={{ width: "1rem", height: "1rem", animation: "spin 1s linear infinite", color: "var(--muted-foreground)" }} />
+                      </SearchCenter>
                     )}
-
                     {!searching && searchQuery.trim().length < 2 && (
-                      <p className="p-5 text-center text-[12px] text-muted-foreground">
-                        Digite ao menos 2 caracteres.
-                      </p>
+                      <SearchHint>Digite ao menos 2 caracteres.</SearchHint>
                     )}
-
                     {!searching && searchQuery.trim().length >= 2 && searchResults.length === 0 && (
-                      <p className="p-5 text-center text-[12px] text-muted-foreground">
-                        Nenhum usuário encontrado.
-                      </p>
+                      <SearchHint>Nenhum usuário encontrado.</SearchHint>
                     )}
-
                     {!searching && searchResults.map((r) => (
-                      <div key={r.id} className="flex items-center gap-3 px-4 py-3 border-b border-border last:border-0">
-                        <Avatar className="w-9 h-9 shrink-0">
+                      <SearchResultItem key={r.id}>
+                        <Avatar style={{ width: "2.25rem", height: "2.25rem", flexShrink: 0 }}>
                           <AvatarImage src={avatarUrl(r)} alt={r.displayName} />
                           <AvatarFallback>{r.displayName[0]}</AvatarFallback>
                         </Avatar>
-                        <div className="flex-1 min-w-0">
-                          <p className="text-[13px] font-semibold text-foreground truncate">{r.displayName}</p>
-                          <p className="text-[11px] text-muted-foreground truncate">@{r.username}</p>
-                        </div>
-
-                        {/* status badge / action */}
-                        {r.status === "accepted" && (
-                          <span className="shrink-0 text-[11px] px-2 py-1 rounded-lg bg-surface-inset text-muted-foreground">
-                            Amigo
-                          </span>
-                        )}
-                        {r.status === "pending_sent" && (
-                          <span className="shrink-0 text-[11px] px-2 py-1 rounded-lg bg-primary/10 text-primary">
-                            Enviado
-                          </span>
-                        )}
+                        <FriendInfo style={{ flex: 1, minWidth: 0 }}>
+                          <FriendName>{r.displayName}</FriendName>
+                          <FriendHandle>@{r.username}</FriendHandle>
+                        </FriendInfo>
+                        {r.status === "accepted" && <UserStatusBadge>Amigo</UserStatusBadge>}
+                        {r.status === "pending_sent" && <SentBadge>Enviado</SentBadge>}
                         {r.status === "pending_received" && (
-                          <button
-                            onClick={() => handleAccept(r)}
-                            className="shrink-0 flex items-center gap-1 text-[11px] px-2 py-1 rounded-lg bg-success/10 text-success hover:bg-success hover:text-white transition-colors"
-                          >
-                            <Check className="w-3 h-3" /> Aceitar
-                          </button>
+                          <AcceptSmallButton onClick={() => handleAccept(r)}>
+                            <Check style={{ width: "0.75rem", height: "0.75rem" }} /> Aceitar
+                          </AcceptSmallButton>
                         )}
                         {r.status === "none" && (
-                          <button
-                            onClick={() => handleSendRequest(r)}
-                            className="shrink-0 p-1.5 rounded-lg bg-primary/10 text-primary hover:bg-primary hover:text-primary-foreground transition-colors"
-                            aria-label={`Adicionar ${r.displayName}`}
-                          >
-                            <UserPlus className="w-3.5 h-3.5" />
-                          </button>
+                          <AddButton onClick={() => handleSendRequest(r)} aria-label={`Adicionar ${r.displayName}`}>
+                            <UserPlus style={{ width: "0.875rem", height: "0.875rem" }} />
+                          </AddButton>
                         )}
-                      </div>
+                      </SearchResultItem>
                     ))}
-                  </div>
+                  </AddFriendPanel>
                 )}
-              </div>
-            </div>
+              </TabContent>
+            </Sidebar>
 
-            {/* ── Chat area ─────────────────────────────────────── */}
-            <div className="flex-1 flex flex-col min-w-0">
+            {/* Chat area */}
+            <ChatArea>
               {selectedFriend ? (
                 <>
-                  {/* Header */}
-                  <div className="flex items-center justify-between gap-3 px-5 py-3.5 border-b border-border shrink-0">
-                    <div className="flex items-center gap-3">
-                      <Avatar className="w-9 h-9">
+                  <ChatHeader>
+                    <ChatHeaderInfo>
+                      <Avatar style={{ width: "2.25rem", height: "2.25rem" }}>
                         <AvatarImage src={avatarUrl(selectedFriend)} alt={selectedFriend.displayName} />
                         <AvatarFallback>{selectedFriend.displayName[0]}</AvatarFallback>
                       </Avatar>
                       <div>
-                        <p className="text-[15px] font-semibold text-foreground leading-tight">{selectedFriend.displayName}</p>
-                        <p className="text-[12px] text-muted-foreground">@{selectedFriend.username}</p>
+                        <ChatFriendName>{selectedFriend.displayName}</ChatFriendName>
+                        <ChatFriendHandle>@{selectedFriend.username}</ChatFriendHandle>
                       </div>
-                    </div>
-                    <button
-                      onClick={() => handleRemoveFriend(selectedFriend.id)}
-                      className="text-[12px] text-destructive hover:underline shrink-0"
-                    >
+                    </ChatHeaderInfo>
+                    <RemoveFriendButton onClick={() => handleRemoveFriend(selectedFriend.id)}>
                       Remover amigo
-                    </button>
-                  </div>
+                    </RemoveFriendButton>
+                  </ChatHeader>
 
-                  {/* Messages */}
-                  <div className="flex-1 overflow-y-auto px-5 py-4 space-y-2.5">
+                  <MessagesArea>
                     {loadingMsgs && messages.length === 0 ? (
-                      <div className="flex justify-center pt-10">
-                        <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
+                      <div style={{ display: "flex", justifyContent: "center", paddingTop: "2.5rem" }}>
+                        <Loader2 style={{ width: "1.25rem", height: "1.25rem", animation: "spin 1s linear infinite", color: "var(--muted-foreground)" }} />
                       </div>
                     ) : messages.length === 0 ? (
-                      <p className="text-center py-12 text-[14px] text-muted-foreground">
+                      <p style={{ textAlign: "center", padding: "3rem 0", fontSize: "0.875rem", color: "var(--muted-foreground)" }}>
                         Nenhuma mensagem ainda. Diga olá! 👋
                       </p>
                     ) : (
@@ -493,85 +877,64 @@ export default function ChatPage() {
                           return (
                             <Fragment key={msg.id}>
                               {firstUnreadIdx !== -1 && idx === firstUnreadIdx && (
-                                <div className="flex items-center gap-2 py-1">
-                                  <div className="flex-1 h-px bg-primary/30" />
-                                  <span className="text-[11px] text-primary font-medium shrink-0">
+                                <UnreadDivider>
+                                  <DividerLine />
+                                  <DividerLabel>
                                     {unreadCount === 1 ? "1 mensagem não lida" : `${unreadCount} mensagens não lidas`}
-                                  </span>
-                                  <div className="flex-1 h-px bg-primary/30" />
-                                </div>
+                                  </DividerLabel>
+                                  <DividerLine />
+                                </UnreadDivider>
                               )}
-                              <div className={`flex ${isMe ? "justify-end" : "justify-start"}`}>
-                                <div
-                                  className={`max-w-[70%] px-4 py-2.5 rounded-2xl text-[14px] leading-relaxed ${
-                                    isMe
-                                      ? "bg-primary text-primary-foreground rounded-br-sm"
-                                      : "bg-surface-raised text-foreground rounded-bl-sm"
-                                  }`}
-                                >
-                                  <p className="break-words">{msg.content}</p>
-                                  <p className={`flex items-center gap-1 text-[10px] mt-1 ${isMe ? "text-primary-foreground/60" : "text-muted-foreground"}`}>
+                              <MessageRow $mine={isMe}>
+                                <MessageBubble $mine={isMe}>
+                                  <MessageText>{msg.content}</MessageText>
+                                  <MessageMeta $mine={isMe}>
                                     {formatTime(msg.sentAt)}
-                                    {isMe && (
-                                      msg.isRead
-                                        ? <CheckCheck className="w-3 h-3" />
-                                        : <Check className="w-3 h-3" />
-                                    )}
-                                  </p>
-                                </div>
-                              </div>
+                                    {isMe && (msg.isRead ? <CheckCheck style={{ width: "0.75rem", height: "0.75rem" }} /> : <Check style={{ width: "0.75rem", height: "0.75rem" }} />)}
+                                  </MessageMeta>
+                                </MessageBubble>
+                              </MessageRow>
                             </Fragment>
                           );
                         })}
                       </>
                     )}
                     <div ref={messagesEndRef} />
-                  </div>
+                  </MessagesArea>
 
-                  {/* Input */}
-                  <div className="px-5 py-4 border-t border-border shrink-0">
-                    <div className="flex gap-3 items-center">
-                      <input
+                  <InputArea>
+                    <InputRow>
+                      <MessageInput
                         type="text"
                         placeholder={connected ? "Digite uma mensagem..." : "Conectando..."}
                         value={input}
                         onChange={(e) => setInput(e.target.value)}
-                        onKeyDown={(e) => {
-                          if (e.key === "Enter" && !e.shiftKey) {
-                            e.preventDefault();
-                            handleSend();
-                          }
-                        }}
+                        onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleSend(); } }}
                         disabled={!connected}
-                        className="flex-1 h-11 px-4 rounded-xl text-[14px] bg-surface-raised border border-border outline-none text-foreground placeholder:text-text-tertiary disabled:opacity-50"
                       />
-                      <button
+                      <SendButton
                         onClick={handleSend}
                         disabled={!input.trim() || !connected || sending}
-                        className="h-11 w-11 flex items-center justify-center rounded-xl bg-primary text-primary-foreground hover:opacity-80 transition-opacity disabled:opacity-40 shrink-0"
                         aria-label="Enviar"
                       >
                         {sending
-                          ? <Loader2 className="w-4 h-4 animate-spin" />
-                          : <Send className="w-4 h-4" />}
-                      </button>
-                    </div>
-                  </div>
+                          ? <Loader2 style={{ width: "1rem", height: "1rem", animation: "spin 1s linear infinite" }} />
+                          : <Send style={{ width: "1rem", height: "1rem" }} />}
+                      </SendButton>
+                    </InputRow>
+                  </InputArea>
                 </>
               ) : (
-                <div className="flex-1 flex flex-col items-center justify-center text-center p-8 gap-3">
-                  <MessageCircle className="w-12 h-12 text-muted-foreground opacity-30" />
-                  <p className="text-[17px] font-semibold text-foreground">Selecione um amigo</p>
-                  <p className="text-[14px] text-muted-foreground">
-                    Escolha um amigo na lista para começar a conversa.
-                  </p>
-                </div>
+                <EmptyChat>
+                  <MessageCircle style={{ width: "3rem", height: "3rem", color: "var(--muted-foreground)", opacity: 0.3 }} />
+                  <EmptyChatTitle>Selecione um amigo</EmptyChatTitle>
+                  <EmptyChatSubtitle>Escolha um amigo na lista para começar a conversa.</EmptyChatSubtitle>
+                </EmptyChat>
               )}
-            </div>
-
-          </div>
-        </div>
-      </main>
+            </ChatArea>
+          </ChatLayout>
+        </Container>
+      </MainPage>
     </AuthGuard>
   );
 }

@@ -1,182 +1,197 @@
 import * as React from 'react'
 import { Slot } from '@radix-ui/react-slot'
-import { cva, type VariantProps } from 'class-variance-authority'
+import styled, { css } from 'styled-components'
 
-import { cn } from '@/lib/utils'
 import { Separator } from '@/components/ui/separator'
 
-function ItemGroup({ className, ...props }: React.ComponentProps<'div'>) {
-  return (
-    <div
-      role="list"
-      data-slot="item-group"
-      className={cn('group/item-group flex flex-col', className)}
-      {...props}
-    />
-  )
+const StyledItemGroup = styled.div`
+  display: flex;
+  flex-direction: column;
+`
+
+const StyledItemSeparator = styled(Separator)`
+  margin: 0;
+`
+
+type ItemVariant = 'default' | 'outline' | 'muted'
+type ItemSize = 'default' | 'sm'
+
+const variantStyles: Record<ItemVariant, ReturnType<typeof css>> = {
+  default: css`background-color: transparent;`,
+  outline: css`border-color: var(--border);`,
+  muted: css`background-color: color-mix(in oklch, var(--muted) 50%, transparent);`,
 }
 
-function ItemSeparator({
-  className,
-  ...props
-}: React.ComponentProps<typeof Separator>) {
-  return (
-    <Separator
-      data-slot="item-separator"
-      orientation="horizontal"
-      className={cn('my-0', className)}
-      {...props}
-    />
-  )
+const sizeStyles: Record<ItemSize, ReturnType<typeof css>> = {
+  default: css`padding: 1rem; gap: 1rem;`,
+  sm: css`padding: 0.75rem 1rem; gap: 0.625rem;`,
 }
 
-const itemVariants = cva(
-  'group/item flex items-center border border-transparent text-sm rounded-md transition-colors [a&]:hover:bg-accent/50 [a&]:transition-colors duration-100 flex-wrap outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px]',
-  {
-    variants: {
-      variant: {
-        default: 'bg-transparent',
-        outline: 'border-border',
-        muted: 'bg-muted/50',
-      },
-      size: {
-        default: 'p-4 gap-4 ',
-        sm: 'py-3 px-4 gap-2.5',
-      },
-    },
-    defaultVariants: {
-      variant: 'default',
-      size: 'default',
-    },
-  },
-)
+const StyledItem = styled.div<{ $variant?: ItemVariant; $size?: ItemSize }>`
+  display: flex;
+  align-items: center;
+  border: 1px solid transparent;
+  font-size: 0.875rem;
+  border-radius: var(--radius-md);
+  transition: background-color 100ms;
+  flex-wrap: wrap;
+  outline: none;
+
+  &:focus-visible {
+    border-color: var(--ring);
+    box-shadow: 0 0 0 3px color-mix(in oklch, var(--ring) 50%, transparent);
+  }
+
+  ${({ $variant = 'default' }) => variantStyles[$variant]}
+  ${({ $size = 'default' }) => sizeStyles[$size]}
+`
+
+const StyledItemMedia = styled.div<{ $variant?: string }>`
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+
+  & svg { pointer-events: none; }
+
+  ${({ $variant = 'default' }) => {
+    if ($variant === 'icon') return css`
+      width: 2rem; height: 2rem;
+      border: 1px solid var(--border);
+      border-radius: 0.25rem;
+      background-color: var(--muted);
+      & svg { width: 1rem; height: 1rem; }
+    `
+    if ($variant === 'image') return css`
+      width: 2.5rem; height: 2.5rem;
+      border-radius: 0.25rem;
+      overflow: hidden;
+      & img { width: 100%; height: 100%; object-fit: cover; }
+    `
+    return css`background-color: transparent;`
+  }}
+`
+
+const StyledItemContent = styled.div`
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 0.25rem;
+`
+
+const StyledItemTitle = styled.div`
+  display: flex;
+  width: fit-content;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.875rem;
+  line-height: 1.375;
+  font-weight: 500;
+`
+
+const StyledItemDescription = styled.p`
+  color: var(--muted-foreground);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  font-size: 0.875rem;
+  line-height: normal;
+  font-weight: normal;
+  text-wrap: balance;
+
+  & > a { text-decoration: underline; text-underline-offset: 4px; }
+  & > a:hover { color: var(--primary); }
+`
+
+const StyledItemActions = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+`
+
+const StyledItemHeader = styled.div`
+  display: flex;
+  flex-basis: 100%;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+`
+
+const StyledItemFooter = styled.div`
+  display: flex;
+  flex-basis: 100%;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+`
+
+function ItemGroup({ ...props }: React.ComponentProps<'div'>) {
+  return <StyledItemGroup role="list" data-slot="item-group" {...props} />
+}
+
+function ItemSeparator({ ...props }: React.ComponentProps<typeof Separator>) {
+  return <StyledItemSeparator data-slot="item-separator" orientation="horizontal" {...props} />
+}
 
 function Item({
-  className,
   variant = 'default',
   size = 'default',
   asChild = false,
   ...props
 }: React.ComponentProps<'div'> &
-  VariantProps<typeof itemVariants> & { asChild?: boolean }) {
+  { variant?: ItemVariant; size?: ItemSize; asChild?: boolean }) {
   const Comp = asChild ? Slot : 'div'
   return (
-    <Comp
+    <StyledItem
+      as={Comp}
       data-slot="item"
       data-variant={variant}
       data-size={size}
-      className={cn(itemVariants({ variant, size, className }))}
+      $variant={variant}
+      $size={size}
       {...props}
     />
   )
 }
-
-const itemMediaVariants = cva(
-  'flex shrink-0 items-center justify-center gap-2 group-has-[[data-slot=item-description]]/item:self-start [&_svg]:pointer-events-none group-has-[[data-slot=item-description]]/item:translate-y-0.5',
-  {
-    variants: {
-      variant: {
-        default: 'bg-transparent',
-        icon: "size-8 border rounded-sm bg-muted [&_svg:not([class*='size-'])]:size-4",
-        image:
-          'size-10 rounded-sm overflow-hidden [&_img]:size-full [&_img]:object-cover',
-      },
-    },
-    defaultVariants: {
-      variant: 'default',
-    },
-  },
-)
 
 function ItemMedia({
-  className,
   variant = 'default',
   ...props
-}: React.ComponentProps<'div'> & VariantProps<typeof itemMediaVariants>) {
+}: React.ComponentProps<'div'> & { variant?: 'default' | 'icon' | 'image' }) {
   return (
-    <div
+    <StyledItemMedia
       data-slot="item-media"
       data-variant={variant}
-      className={cn(itemMediaVariants({ variant, className }))}
+      $variant={variant}
       {...props}
     />
   )
 }
 
-function ItemContent({ className, ...props }: React.ComponentProps<'div'>) {
-  return (
-    <div
-      data-slot="item-content"
-      className={cn(
-        'flex flex-1 flex-col gap-1 [&+[data-slot=item-content]]:flex-none',
-        className,
-      )}
-      {...props}
-    />
-  )
+function ItemContent({ ...props }: React.ComponentProps<'div'>) {
+  return <StyledItemContent data-slot="item-content" {...props} />
 }
 
-function ItemTitle({ className, ...props }: React.ComponentProps<'div'>) {
-  return (
-    <div
-      data-slot="item-title"
-      className={cn(
-        'flex w-fit items-center gap-2 text-sm leading-snug font-medium',
-        className,
-      )}
-      {...props}
-    />
-  )
+function ItemTitle({ ...props }: React.ComponentProps<'div'>) {
+  return <StyledItemTitle data-slot="item-title" {...props} />
 }
 
-function ItemDescription({ className, ...props }: React.ComponentProps<'p'>) {
-  return (
-    <p
-      data-slot="item-description"
-      className={cn(
-        'text-muted-foreground line-clamp-2 text-sm leading-normal font-normal text-balance',
-        '[&>a:hover]:text-primary [&>a]:underline [&>a]:underline-offset-4',
-        className,
-      )}
-      {...props}
-    />
-  )
+function ItemDescription({ ...props }: React.ComponentProps<'p'>) {
+  return <StyledItemDescription data-slot="item-description" {...props} />
 }
 
-function ItemActions({ className, ...props }: React.ComponentProps<'div'>) {
-  return (
-    <div
-      data-slot="item-actions"
-      className={cn('flex items-center gap-2', className)}
-      {...props}
-    />
-  )
+function ItemActions({ ...props }: React.ComponentProps<'div'>) {
+  return <StyledItemActions data-slot="item-actions" {...props} />
 }
 
-function ItemHeader({ className, ...props }: React.ComponentProps<'div'>) {
-  return (
-    <div
-      data-slot="item-header"
-      className={cn(
-        'flex basis-full items-center justify-between gap-2',
-        className,
-      )}
-      {...props}
-    />
-  )
+function ItemHeader({ ...props }: React.ComponentProps<'div'>) {
+  return <StyledItemHeader data-slot="item-header" {...props} />
 }
 
-function ItemFooter({ className, ...props }: React.ComponentProps<'div'>) {
-  return (
-    <div
-      data-slot="item-footer"
-      className={cn(
-        'flex basis-full items-center justify-between gap-2',
-        className,
-      )}
-      {...props}
-    />
-  )
+function ItemFooter({ ...props }: React.ComponentProps<'div'>) {
+  return <StyledItemFooter data-slot="item-footer" {...props} />
 }
 
 export {

@@ -2,8 +2,22 @@
 
 import * as React from 'react'
 import * as SeparatorPrimitive from '@radix-ui/react-separator'
+import styled from 'styled-components'
 
-import { cn } from '@/lib/utils'
+const StyledSeparator = styled(SeparatorPrimitive.Root)`
+  flex-shrink: 0;
+  background-color: var(--border);
+
+  &[data-orientation='horizontal'] {
+    height: 1px;
+    width: 100%;
+  }
+
+  &[data-orientation='vertical'] {
+    height: 100%;
+    width: 1px;
+  }
+`
 
 function Separator({
   className,
@@ -12,14 +26,11 @@ function Separator({
   ...props
 }: React.ComponentProps<typeof SeparatorPrimitive.Root>) {
   return (
-    <SeparatorPrimitive.Root
+    <StyledSeparator
       data-slot="separator"
       decorative={decorative}
       orientation={orientation}
-      className={cn(
-        'bg-border shrink-0 data-[orientation=horizontal]:h-px data-[orientation=horizontal]:w-full data-[orientation=vertical]:h-full data-[orientation=vertical]:w-px',
-        className,
-      )}
+      className={className}
       {...props}
     />
   )

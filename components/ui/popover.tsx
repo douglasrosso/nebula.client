@@ -2,8 +2,39 @@
 
 import * as React from 'react'
 import * as PopoverPrimitive from '@radix-ui/react-popover'
+import styled from 'styled-components'
 
-import { cn } from '@/lib/utils'
+const StyledPopoverContent = styled(PopoverPrimitive.Content)`
+  background-color: var(--popover);
+  color: var(--popover-foreground);
+  z-index: 50;
+  width: 18rem;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border);
+  padding: 1rem;
+  box-shadow: 0 4px 6px -1px oklch(0 0 0 / 0.1), 0 2px 4px -2px oklch(0 0 0 / 0.1);
+  outline: none;
+  transform-origin: var(--radix-popover-content-transform-origin);
+
+  &[data-state='open'] {
+    animation-name: enter;
+    animation-duration: 150ms;
+    --tw-enter-opacity: 0;
+    --tw-enter-scale: 0.95;
+  }
+
+  &[data-state='closed'] {
+    animation-name: exit;
+    animation-duration: 150ms;
+    --tw-exit-opacity: 0;
+    --tw-exit-scale: 0.95;
+  }
+
+  &[data-side='bottom'] { --tw-enter-translate-y: -0.5rem; }
+  &[data-side='top'] { --tw-enter-translate-y: 0.5rem; }
+  &[data-side='left'] { --tw-enter-translate-x: 0.5rem; }
+  &[data-side='right'] { --tw-enter-translate-x: -0.5rem; }
+`
 
 function Popover({
   ...props
@@ -25,14 +56,11 @@ function PopoverContent({
 }: React.ComponentProps<typeof PopoverPrimitive.Content>) {
   return (
     <PopoverPrimitive.Portal>
-      <PopoverPrimitive.Content
+      <StyledPopoverContent
         data-slot="popover-content"
         align={align}
         sideOffset={sideOffset}
-        className={cn(
-          'bg-popover text-popover-foreground data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 z-50 w-72 origin-(--radix-popover-content-transform-origin) rounded-md border p-4 shadow-md outline-hidden',
-          className,
-        )}
+        className={className}
         {...props}
       />
     </PopoverPrimitive.Portal>

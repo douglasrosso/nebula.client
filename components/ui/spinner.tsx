@@ -1,13 +1,21 @@
 import { Loader2Icon } from 'lucide-react'
+import styled from 'styled-components'
 
-import { cn } from '@/lib/utils'
+const StyledSpinner = styled(Loader2Icon)`
+  width: 1rem;
+  height: 1rem;
+  animation: spin 1s linear infinite;
+  @keyframes spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+  }
+`
 
-function Spinner({ className, ...props }: React.ComponentProps<'svg'>) {
+function Spinner({ ...props }: React.ComponentProps<'svg'>) {
   return (
-    <Loader2Icon
+    <StyledSpinner
       role="status"
       aria-label="Loading"
-      className={cn('size-4 animate-spin', className)}
       {...props}
     />
   )

@@ -3,8 +3,151 @@
 import * as React from 'react'
 import * as DialogPrimitive from '@radix-ui/react-dialog'
 import { XIcon } from 'lucide-react'
+import styled from 'styled-components'
 
-import { cn } from '@/lib/utils'
+const StyledDialogOverlay = styled(DialogPrimitive.Overlay)`
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  background-color: oklch(0 0 0 / 0.5);
+
+  &[data-state='open'] {
+    animation-name: enter;
+    animation-duration: 150ms;
+    --tw-enter-opacity: 0;
+  }
+
+  &[data-state='closed'] {
+    animation-name: exit;
+    animation-duration: 150ms;
+    --tw-exit-opacity: 0;
+  }
+`
+
+const StyledDialogContent = styled(DialogPrimitive.Content)`
+  background-color: var(--background);
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  z-index: 50;
+  display: grid;
+  width: 100%;
+  max-width: calc(100% - 2rem);
+  transform: translate(-50%, -50%);
+  gap: 1rem;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border);
+  padding: 1.5rem;
+  box-shadow: 0 10px 15px -3px oklch(0 0 0 / 0.1), 0 4px 6px -4px oklch(0 0 0 / 0.1);
+  animation-duration: 200ms;
+
+  &[data-state='open'] {
+    animation-name: enter;
+    --tw-enter-opacity: 0;
+    --tw-enter-scale: 0.95;
+  }
+
+  &[data-state='closed'] {
+    animation-name: exit;
+    --tw-exit-opacity: 0;
+    --tw-exit-scale: 0.95;
+  }
+
+  @media (min-width: 640px) {
+    max-width: 32rem;
+  }
+`
+
+const StyledCloseButton = styled(DialogPrimitive.Close)`
+  position: absolute;
+  top: 1rem;
+  right: 1rem;
+  border-radius: 2px;
+  opacity: 0.7;
+  transition: opacity 150ms;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: inherit;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  &:hover {
+    opacity: 1;
+  }
+
+  &:focus {
+    outline: none;
+    box-shadow: 0 0 0 2px var(--ring);
+  }
+
+  &:focus:not(:focus-visible) {
+    box-shadow: none;
+  }
+
+  &:disabled {
+    pointer-events: none;
+  }
+
+  &[data-state='open'] {
+    background-color: var(--accent);
+    color: var(--muted-foreground);
+  }
+
+  & svg {
+    pointer-events: none;
+    flex-shrink: 0;
+    width: 1rem;
+    height: 1rem;
+  }
+`
+
+const SrOnly = styled.span`
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border-width: 0;
+`
+
+const StyledDialogHeader = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  text-align: center;
+
+  @media (min-width: 640px) {
+    text-align: left;
+  }
+`
+
+const StyledDialogFooter = styled.div`
+  display: flex;
+  flex-direction: column-reverse;
+  gap: 0.5rem;
+
+  @media (min-width: 640px) {
+    flex-direction: row;
+    justify-content: flex-end;
+  }
+`
+
+const StyledDialogTitle = styled(DialogPrimitive.Title)`
+  font-size: 1.125rem;
+  line-height: 1;
+  font-weight: 600;
+`
+
+const StyledDialogDescription = styled(DialogPrimitive.Description)`
+  color: var(--muted-foreground);
+  font-size: 0.875rem;
+  line-height: 1.25rem;
+`
 
 function Dialog({
   ...props
@@ -35,12 +178,9 @@ function DialogOverlay({
   ...props
 }: React.ComponentProps<typeof DialogPrimitive.Overlay>) {
   return (
-    <DialogPrimitive.Overlay
+    <StyledDialogOverlay
       data-slot="dialog-overlay"
-      className={cn(
-        'data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 fixed inset-0 z-50 bg-black/50',
-        className,
-      )}
+      className={className}
       {...props}
     />
   )
@@ -57,34 +197,28 @@ function DialogContent({
   return (
     <DialogPortal data-slot="dialog-portal">
       <DialogOverlay />
-      <DialogPrimitive.Content
+      <StyledDialogContent
         data-slot="dialog-content"
-        className={cn(
-          'bg-background data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 fixed top-[50%] left-[50%] z-50 grid w-full max-w-[calc(100%-2rem)] translate-x-[-50%] translate-y-[-50%] gap-4 rounded-lg border p-6 shadow-lg duration-200 sm:max-w-lg',
-          className,
-        )}
+        className={className}
         {...props}
       >
         {children}
         {showCloseButton && (
-          <DialogPrimitive.Close
-            data-slot="dialog-close"
-            className="ring-offset-background focus:ring-ring data-[state=open]:bg-accent data-[state=open]:text-muted-foreground absolute top-4 right-4 rounded-xs opacity-70 transition-opacity hover:opacity-100 focus:ring-2 focus:ring-offset-2 focus:outline-hidden disabled:pointer-events-none [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4"
-          >
+          <StyledCloseButton data-slot="dialog-close">
             <XIcon />
-            <span className="sr-only">Close</span>
-          </DialogPrimitive.Close>
+            <SrOnly>Close</SrOnly>
+          </StyledCloseButton>
         )}
-      </DialogPrimitive.Content>
+      </StyledDialogContent>
     </DialogPortal>
   )
 }
 
 function DialogHeader({ className, ...props }: React.ComponentProps<'div'>) {
   return (
-    <div
+    <StyledDialogHeader
       data-slot="dialog-header"
-      className={cn('flex flex-col gap-2 text-center sm:text-left', className)}
+      className={className}
       {...props}
     />
   )
@@ -92,12 +226,9 @@ function DialogHeader({ className, ...props }: React.ComponentProps<'div'>) {
 
 function DialogFooter({ className, ...props }: React.ComponentProps<'div'>) {
   return (
-    <div
+    <StyledDialogFooter
       data-slot="dialog-footer"
-      className={cn(
-        'flex flex-col-reverse gap-2 sm:flex-row sm:justify-end',
-        className,
-      )}
+      className={className}
       {...props}
     />
   )
@@ -108,9 +239,9 @@ function DialogTitle({
   ...props
 }: React.ComponentProps<typeof DialogPrimitive.Title>) {
   return (
-    <DialogPrimitive.Title
+    <StyledDialogTitle
       data-slot="dialog-title"
-      className={cn('text-lg leading-none font-semibold', className)}
+      className={className}
       {...props}
     />
   )
@@ -121,9 +252,9 @@ function DialogDescription({
   ...props
 }: React.ComponentProps<typeof DialogPrimitive.Description>) {
   return (
-    <DialogPrimitive.Description
+    <StyledDialogDescription
       data-slot="dialog-description"
-      className={cn('text-muted-foreground text-sm', className)}
+      className={className}
       {...props}
     />
   )

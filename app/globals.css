@@ -1,8 +1,3 @@
-@import 'tailwindcss';
-@import 'tw-animate-css';
-
-@custom-variant dark (&:is(.dark *));
-
 /* ─── Light mode (Apple HIG) ─── */
 :root {
   --background: oklch(0.96 0.003 265);        /* #F2F2F7 */
@@ -29,6 +24,11 @@
   --input: oklch(0.91 0.003 265);
   --ring: oklch(0.57 0.24 258);
   --radius: 0.75rem;
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: var(--radius);
+  --radius-lg: calc(var(--radius) + 4px);
+  --radius-xl: calc(var(--radius) + 8px);
+  --radius-2xl: calc(var(--radius) + 16px);
 
   /* Semantic surface tokens */
   --surface-base:   oklch(0.96 0.003 265);     /* page/group background */
@@ -58,6 +58,10 @@
   --sidebar-accent-foreground: oklch(0.07 0 0);
   --sidebar-border: oklch(0.26 0.003 265 / 0.2);
   --sidebar-ring: oklch(0.57 0.24 258);
+
+  /* Font */
+  --font-sans: -apple-system, 'SF Pro Display', 'SF Pro Text', BlinkMacSystemFont, 'Helvetica Neue', system-ui, sans-serif;
+  --font-mono: 'SF Mono', ui-monospace, 'Cascadia Code', monospace;
 }
 
 /* ─── Dark mode (Apple HIG) ─── */
@@ -112,66 +116,29 @@
   --sidebar-ring: oklch(0.62 0.23 258);
 }
 
-@theme inline {
-  --font-sans: -apple-system, 'SF Pro Display', 'SF Pro Text', BlinkMacSystemFont, 'Helvetica Neue', system-ui, sans-serif;
-  --font-mono: 'SF Mono', ui-monospace, 'Cascadia Code', monospace;
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --color-card: var(--card);
-  --color-card-foreground: var(--card-foreground);
-  --color-popover: var(--popover);
-  --color-popover-foreground: var(--popover-foreground);
-  --color-primary: var(--primary);
-  --color-primary-foreground: var(--primary-foreground);
-  --color-secondary: var(--secondary);
-  --color-secondary-foreground: var(--secondary-foreground);
-  --color-muted: var(--muted);
-  --color-muted-foreground: var(--muted-foreground);
-  --color-accent: var(--accent);
-  --color-accent-foreground: var(--accent-foreground);
-  --color-destructive: var(--destructive);
-  --color-destructive-foreground: var(--destructive-foreground);
-  --color-success: var(--success);
-  --color-success-foreground: var(--success-foreground);
-  --color-warning: var(--warning);
-  --color-warning-foreground: var(--warning-foreground);
-  --color-border: var(--border);
-  --color-input: var(--input);
-  --color-ring: var(--ring);
-  --color-chart-1: var(--chart-1);
-  --color-chart-2: var(--chart-2);
-  --color-chart-3: var(--chart-3);
-  --color-chart-4: var(--chart-4);
-  --color-chart-5: var(--chart-5);
-  --radius-sm: calc(var(--radius) - 4px);
-  --radius-md: var(--radius);
-  --radius-lg: calc(var(--radius) + 4px);
-  --radius-xl: calc(var(--radius) + 8px);
-  --radius-2xl: calc(var(--radius) + 16px);
-  --color-sidebar: var(--sidebar);
-  --color-sidebar-foreground: var(--sidebar-foreground);
-  --color-sidebar-primary: var(--sidebar-primary);
-  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
-  --color-sidebar-accent: var(--sidebar-accent);
-  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
-  --color-sidebar-border: var(--sidebar-border);
-  --color-sidebar-ring: var(--sidebar-ring);
-  --color-glass-bg: var(--glass-bg);
-  --color-glass-border: var(--glass-border);
-  --color-glass-hover: var(--glass-hover);
-  /* Semantic surface tokens exposed to Tailwind */
-  --color-surface-base: var(--surface-base);
-  --color-surface-raised: var(--surface-raised);
-  --color-surface-inset: var(--surface-inset);
-  --color-text-tertiary: var(--text-tertiary);
-  --color-divider: var(--divider);
+/* ─── Base Reset ─── */
+*, *::before, *::after {
+  box-sizing: border-box;
+  border-color: var(--border);
+  outline-color: color-mix(in oklch, var(--ring) 50%, transparent);
 }
 
-@layer base {
-  * { @apply border-border outline-ring/50; }
-  body { @apply bg-background text-foreground; }
+html {
+  line-height: 1.5;
+  -webkit-text-size-adjust: 100%;
 }
 
+body {
+  margin: 0;
+  background-color: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  min-height: 100vh;
+}
+
+/* ─── Glass effect ─── */
 .glass {
   background: var(--glass-bg);
   backdrop-filter: blur(40px) saturate(150%);
@@ -181,11 +148,13 @@
 
 .glass-hover:hover { background: var(--glass-hover); }
 
+/* ─── Scrollbar ─── */
 ::-webkit-scrollbar { width: 6px; height: 6px; }
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb { background: oklch(0.50 0.003 265 / 0.4); border-radius: 3px; }
 ::-webkit-scrollbar-thumb:hover { background: oklch(0.50 0.003 265 / 0.6); }
 
+/* ─── App animations ─── */
 @keyframes fadeIn {
   from { opacity: 0; transform: translateY(8px) scale(0.99); }
   to   { opacity: 1; transform: translateY(0) scale(1); }
@@ -202,13 +171,74 @@
   0%, 100% { box-shadow: 0 0 0 0 color-mix(in oklch, var(--primary) 30%, transparent); }
   50%       { box-shadow: 0 0 0 8px color-mix(in oklch, var(--primary) 0%, transparent); }
 }
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
 
 .animate-fade-in   { animation: fadeIn  0.25s cubic-bezier(0.25, 0.46, 0.45, 0.94) both; }
 .animate-slide-up  { animation: slideUp 0.30s cubic-bezier(0.25, 0.46, 0.45, 0.94) both; }
 .animate-scale-in  { animation: scaleIn 0.20s cubic-bezier(0.25, 0.46, 0.45, 0.94) both; }
 .animate-pulse-glow { animation: pulse-glow 2s ease-in-out infinite; }
+.animate-spin      { animation: spin 1s linear infinite; }
 
-:focus-visible { outline: 2px solid oklch(from var(--primary) l c h / 0.8); outline-offset: 2px; }
+/* ─── Radix UI / shadcn animation utilities (tw-animate-css replacement) ─── */
+@keyframes enter {
+  from {
+    opacity: var(--tw-enter-opacity, 1);
+    transform: translate3d(var(--tw-enter-translate-x, 0), var(--tw-enter-translate-y, 0), 0)
+               scale3d(var(--tw-enter-scale, 1), var(--tw-enter-scale, 1), var(--tw-enter-scale, 1))
+               rotate(var(--tw-enter-rotate, 0));
+  }
+}
+@keyframes exit {
+  to {
+    opacity: var(--tw-exit-opacity, 1);
+    transform: translate3d(var(--tw-exit-translate-x, 0), var(--tw-exit-translate-y, 0), 0)
+               scale3d(var(--tw-exit-scale, 1), var(--tw-exit-scale, 1), var(--tw-exit-scale, 1))
+               rotate(var(--tw-exit-rotate, 0));
+  }
+}
+
+.animate-in {
+  animation-name: enter;
+  animation-duration: 150ms;
+  --tw-enter-opacity: 1;
+  --tw-enter-translate-x: 0;
+  --tw-enter-translate-y: 0;
+  --tw-enter-scale: 1;
+  --tw-enter-rotate: 0;
+}
+.animate-out {
+  animation-name: exit;
+  animation-duration: 150ms;
+  --tw-exit-opacity: 1;
+  --tw-exit-translate-x: 0;
+  --tw-exit-translate-y: 0;
+  --tw-exit-scale: 1;
+  --tw-exit-rotate: 0;
+}
+
+.fade-in-0        { --tw-enter-opacity: 0; }
+.fade-out-0       { --tw-exit-opacity: 0; }
+.zoom-in-95       { --tw-enter-scale: 0.95; }
+.zoom-out-95      { --tw-exit-scale: 0.95; }
+.slide-in-from-top-2    { --tw-enter-translate-y: -0.5rem; }
+.slide-in-from-bottom-2 { --tw-enter-translate-y: 0.5rem; }
+.slide-in-from-right    { --tw-enter-translate-x: 100%; }
+.slide-in-from-left     { --tw-enter-translate-x: -100%; }
+.slide-in-from-right-2  { --tw-enter-translate-x: 0.5rem; }
+.slide-in-from-left-2   { --tw-enter-translate-x: -0.5rem; }
+.slide-out-to-right     { --tw-exit-translate-x: 100%; }
+.slide-out-to-left      { --tw-exit-translate-x: -100%; }
+.slide-out-to-top       { --tw-exit-translate-y: -100%; }
+.slide-out-to-bottom    { --tw-exit-translate-y: 100%; }
+.duration-300     { animation-duration: 300ms !important; }
+.duration-500     { animation-duration: 500ms !important; }
+.ease-in-out      { animation-timing-function: cubic-bezier(0.4, 0, 0.2, 1); }
+
+/* ─── Accessibility ─── */
+:focus-visible { outline: 2px solid color-mix(in oklch, var(--primary) 80%, transparent); outline-offset: 2px; }
 
 .skip-link {
   position: absolute; top: -40px; left: 0;
@@ -216,3 +246,16 @@
   padding: 8px 16px; z-index: 100; transition: top 0.2s;
 }
 .skip-link:focus { top: 0; }
+
+/* ─── Screen reader only ─── */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border-width: 0;
+}

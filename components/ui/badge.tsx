@@ -1,46 +1,101 @@
 import * as React from 'react'
 import { Slot } from '@radix-ui/react-slot'
-import { cva, type VariantProps } from 'class-variance-authority'
+import styled, { css } from 'styled-components'
 
-import { cn } from '@/lib/utils'
+type BadgeVariant = 'default' | 'secondary' | 'destructive' | 'outline'
 
-const badgeVariants = cva(
-  'inline-flex items-center justify-center rounded-md border px-2 py-0.5 text-xs font-medium w-fit whitespace-nowrap shrink-0 [&>svg]:size-3 gap-1 [&>svg]:pointer-events-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive transition-[color,box-shadow] overflow-hidden',
-  {
-    variants: {
-      variant: {
-        default:
-          'border-transparent bg-primary text-primary-foreground [a&]:hover:bg-primary/90',
-        secondary:
-          'border-transparent bg-secondary text-secondary-foreground [a&]:hover:bg-secondary/90',
-        destructive:
-          'border-transparent bg-destructive text-white [a&]:hover:bg-destructive/90 focus-visible:ring-destructive/20 dark:focus-visible:ring-destructive/40 dark:bg-destructive/60',
-        outline:
-          'text-foreground [a&]:hover:bg-accent [a&]:hover:text-accent-foreground',
-      },
-    },
-    defaultVariants: {
-      variant: 'default',
-    },
-  },
-)
+interface BadgeProps extends React.ComponentProps<'span'> {
+  variant?: BadgeVariant
+  asChild?: boolean
+}
+
+const variantStyles: Record<BadgeVariant, ReturnType<typeof css>> = {
+  default: css`
+    border-color: transparent;
+    background-color: var(--primary);
+    color: var(--primary-foreground);
+    a&:hover { background-color: color-mix(in oklch, var(--primary) 90%, black); }
+  `,
+  secondary: css`
+    border-color: transparent;
+    background-color: var(--secondary);
+    color: var(--secondary-foreground);
+    a&:hover { background-color: color-mix(in oklch, var(--secondary) 90%, black); }
+  `,
+  destructive: css`
+    border-color: transparent;
+    background-color: var(--destructive);
+    color: white;
+    a&:hover { background-color: color-mix(in oklch, var(--destructive) 90%, black); }
+    &:focus-visible { box-shadow: 0 0 0 3px color-mix(in oklch, var(--destructive) 20%, transparent); }
+  `,
+  outline: css`
+    color: var(--foreground);
+    a&:hover { background-color: var(--accent); color: var(--accent-foreground); }
+  `,
+}
+
+const StyledBadge = styled.span<{ $variant?: BadgeVariant }>`
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border);
+  padding: 0.125rem 0.5rem;
+  font-size: 0.75rem;
+  line-height: 1rem;
+  font-weight: 500;
+  width: fit-content;
+  white-space: nowrap;
+  flex-shrink: 0;
+  gap: 0.25rem;
+  overflow: hidden;
+  transition: color 150ms, box-shadow 150ms;
+
+  & > svg {
+    width: 0.75rem;
+    height: 0.75rem;
+    pointer-events: none;
+  }
+
+  &:focus-visible {
+    border-color: var(--ring);
+    box-shadow: 0 0 0 3px color-mix(in oklch, var(--ring) 50%, transparent);
+    outline: none;
+  }
+
+  &[aria-invalid='true'] {
+    border-color: var(--destructive);
+    box-shadow: 0 0 0 3px color-mix(in oklch, var(--destructive) 20%, transparent);
+  }
+
+  ${({ $variant = 'default' }) => variantStyles[$variant]}
+`
 
 function Badge({
   className,
-  variant,
+  variant = 'default',
   asChild = false,
   ...props
-}: React.ComponentProps<'span'> &
-  VariantProps<typeof badgeVariants> & { asChild?: boolean }) {
-  const Comp = asChild ? Slot : 'span'
+}: BadgeProps) {
+  if (asChild) {
+    return (
+      <Slot
+        data-slot="badge"
+        className={className}
+        {...props}
+      />
+    )
+  }
 
   return (
-    <Comp
+    <StyledBadge
       data-slot="badge"
-      className={cn(badgeVariants({ variant }), className)}
+      $variant={variant}
+      className={className}
       {...props}
     />
   )
 }
 
-export { Badge, badgeVariants }
+export { Badge }

@@ -1,15 +1,71 @@
 import * as React from 'react'
+import styled from 'styled-components'
 
-import { cn } from '@/lib/utils'
+const StyledCard = styled.div`
+  background-color: var(--card);
+  color: var(--card-foreground);
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  border-radius: var(--radius-xl);
+  border: 1px solid var(--border);
+  padding: 1.5rem 0;
+  box-shadow: 0 1px 2px 0 oklch(0 0 0 / 0.05);
+`
+
+const StyledCardHeader = styled.div`
+  display: grid;
+  grid-template-rows: auto auto;
+  align-items: start;
+  gap: 0.5rem;
+  padding: 0 1.5rem;
+
+  &:has([data-slot='card-action']) {
+    grid-template-columns: 1fr auto;
+  }
+
+  &.border-b {
+    padding-bottom: 1.5rem;
+  }
+`
+
+const StyledCardTitle = styled.div`
+  line-height: 1;
+  font-weight: 600;
+`
+
+const StyledCardDescription = styled.div`
+  color: var(--muted-foreground);
+  font-size: 0.875rem;
+  line-height: 1.25rem;
+`
+
+const StyledCardAction = styled.div`
+  grid-column-start: 2;
+  grid-row: 1 / span 2;
+  align-self: start;
+  justify-self: end;
+`
+
+const StyledCardContent = styled.div`
+  padding: 0 1.5rem;
+`
+
+const StyledCardFooter = styled.div`
+  display: flex;
+  align-items: center;
+  padding: 0 1.5rem;
+
+  &.border-t {
+    padding-top: 1.5rem;
+  }
+`
 
 function Card({ className, ...props }: React.ComponentProps<'div'>) {
   return (
-    <div
+    <StyledCard
       data-slot="card"
-      className={cn(
-        'bg-card text-card-foreground flex flex-col gap-6 rounded-xl border py-6 shadow-sm',
-        className,
-      )}
+      className={className}
       {...props}
     />
   )
@@ -17,12 +73,9 @@ function Card({ className, ...props }: React.ComponentProps<'div'>) {
 
 function CardHeader({ className, ...props }: React.ComponentProps<'div'>) {
   return (
-    <div
+    <StyledCardHeader
       data-slot="card-header"
-      className={cn(
-        '@container/card-header grid auto-rows-min grid-rows-[auto_auto] items-start gap-2 px-6 has-data-[slot=card-action]:grid-cols-[1fr_auto] [.border-b]:pb-6',
-        className,
-      )}
+      className={className}
       {...props}
     />
   )
@@ -30,9 +83,9 @@ function CardHeader({ className, ...props }: React.ComponentProps<'div'>) {
 
 function CardTitle({ className, ...props }: React.ComponentProps<'div'>) {
   return (
-    <div
+    <StyledCardTitle
       data-slot="card-title"
-      className={cn('leading-none font-semibold', className)}
+      className={className}
       {...props}
     />
   )
@@ -40,9 +93,9 @@ function CardTitle({ className, ...props }: React.ComponentProps<'div'>) {
 
 function CardDescription({ className, ...props }: React.ComponentProps<'div'>) {
   return (
-    <div
+    <StyledCardDescription
       data-slot="card-description"
-      className={cn('text-muted-foreground text-sm', className)}
+      className={className}
       {...props}
     />
   )
@@ -50,12 +103,9 @@ function CardDescription({ className, ...props }: React.ComponentProps<'div'>) {
 
 function CardAction({ className, ...props }: React.ComponentProps<'div'>) {
   return (
-    <div
+    <StyledCardAction
       data-slot="card-action"
-      className={cn(
-        'col-start-2 row-span-2 row-start-1 self-start justify-self-end',
-        className,
-      )}
+      className={className}
       {...props}
     />
   )
@@ -63,9 +113,9 @@ function CardAction({ className, ...props }: React.ComponentProps<'div'>) {
 
 function CardContent({ className, ...props }: React.ComponentProps<'div'>) {
   return (
-    <div
+    <StyledCardContent
       data-slot="card-content"
-      className={cn('px-6', className)}
+      className={className}
       {...props}
     />
   )
@@ -73,9 +123,9 @@ function CardContent({ className, ...props }: React.ComponentProps<'div'>) {
 
 function CardFooter({ className, ...props }: React.ComponentProps<'div'>) {
   return (
-    <div
+    <StyledCardFooter
       data-slot="card-footer"
-      className={cn('flex items-center px-6 [.border-t]:pt-6', className)}
+      className={className}
       {...props}
     />
   )

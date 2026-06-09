@@ -1,60 +1,137 @@
 import * as React from 'react'
 import { Slot } from '@radix-ui/react-slot'
-import { cva, type VariantProps } from 'class-variance-authority'
+import styled, { css } from 'styled-components'
 
-import { cn } from '@/lib/utils'
+type ButtonVariant = 'default' | 'destructive' | 'outline' | 'secondary' | 'ghost' | 'link'
+type ButtonSize = 'default' | 'sm' | 'lg' | 'icon' | 'icon-sm' | 'icon-lg'
 
-const buttonVariants = cva(
-  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*='size-'])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive",
-  {
-    variants: {
-      variant: {
-        default: 'bg-primary text-primary-foreground hover:bg-primary/90',
-        destructive:
-          'bg-destructive text-white hover:bg-destructive/90 focus-visible:ring-destructive/20 dark:focus-visible:ring-destructive/40 dark:bg-destructive/60',
-        outline:
-          'border bg-background shadow-xs hover:bg-accent hover:text-accent-foreground dark:bg-input/30 dark:border-input dark:hover:bg-input/50',
-        secondary:
-          'bg-secondary text-secondary-foreground hover:bg-secondary/80',
-        ghost:
-          'hover:bg-accent hover:text-accent-foreground dark:hover:bg-accent/50',
-        link: 'text-primary underline-offset-4 hover:underline',
-      },
-      size: {
-        default: 'h-9 px-4 py-2 has-[>svg]:px-3',
-        sm: 'h-8 rounded-md gap-1.5 px-3 has-[>svg]:px-2.5',
-        lg: 'h-10 rounded-md px-6 has-[>svg]:px-4',
-        icon: 'size-9',
-        'icon-sm': 'size-8',
-        'icon-lg': 'size-10',
-      },
-    },
-    defaultVariants: {
-      variant: 'default',
-      size: 'default',
-    },
-  },
-)
+interface ButtonProps extends React.ComponentProps<'button'> {
+  variant?: ButtonVariant
+  size?: ButtonSize
+  asChild?: boolean
+}
+
+const variantStyles: Record<ButtonVariant, ReturnType<typeof css>> = {
+  default: css`
+    background-color: var(--primary);
+    color: var(--primary-foreground);
+    &:hover { background-color: color-mix(in oklch, var(--primary) 90%, black); }
+  `,
+  destructive: css`
+    background-color: var(--destructive);
+    color: white;
+    &:hover { background-color: color-mix(in oklch, var(--destructive) 90%, black); }
+    &:focus-visible { box-shadow: 0 0 0 3px color-mix(in oklch, var(--destructive) 20%, transparent); }
+  `,
+  outline: css`
+    border: 1px solid var(--border);
+    background-color: var(--background);
+    box-shadow: 0 1px 2px 0 oklch(0 0 0 / 0.05);
+    &:hover { background-color: var(--accent); color: var(--accent-foreground); }
+  `,
+  secondary: css`
+    background-color: var(--secondary);
+    color: var(--secondary-foreground);
+    &:hover { background-color: color-mix(in oklch, var(--secondary) 80%, black); }
+  `,
+  ghost: css`
+    &:hover { background-color: var(--accent); color: var(--accent-foreground); }
+  `,
+  link: css`
+    color: var(--primary);
+    text-underline-offset: 4px;
+    &:hover { text-decoration: underline; }
+  `,
+}
+
+const sizeStyles: Record<ButtonSize, ReturnType<typeof css>> = {
+  default: css`height: 2.25rem; padding: 0.5rem 1rem;`,
+  sm: css`height: 2rem; border-radius: var(--radius-md); gap: 0.375rem; padding: 0.5rem 0.75rem; font-size: 0.875rem;`,
+  lg: css`height: 2.5rem; border-radius: var(--radius-md); padding: 0.5rem 1.5rem;`,
+  icon: css`width: 2.25rem; height: 2.25rem; padding: 0;`,
+  'icon-sm': css`width: 2rem; height: 2rem; padding: 0;`,
+  'icon-lg': css`width: 2.5rem; height: 2.5rem; padding: 0;`,
+}
+
+const StyledButton = styled.button<{ $variant?: ButtonVariant; $size?: ButtonSize }>`
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  white-space: nowrap;
+  border-radius: var(--radius-md);
+  font-size: 0.875rem;
+  line-height: 1.25rem;
+  font-weight: 500;
+  transition: all 150ms cubic-bezier(0.4, 0, 0.2, 1);
+  outline: none;
+  flex-shrink: 0;
+  border: none;
+  cursor: pointer;
+  background-color: transparent;
+  color: inherit;
+
+  & svg {
+    pointer-events: none;
+    flex-shrink: 0;
+  }
+
+  & svg:not([class*='size-']) {
+    width: 1rem;
+    height: 1rem;
+  }
+
+  &:disabled {
+    pointer-events: none;
+    opacity: 0.5;
+  }
+
+  &:focus-visible {
+    border-color: var(--ring);
+    box-shadow: 0 0 0 3px color-mix(in oklch, var(--ring) 50%, transparent);
+  }
+
+  &[aria-invalid='true'] {
+    border-color: var(--destructive);
+    box-shadow: 0 0 0 3px color-mix(in oklch, var(--destructive) 20%, transparent);
+  }
+
+  ${({ $variant = 'default' }) => variantStyles[$variant]}
+  ${({ $size = 'default' }) => sizeStyles[$size]}
+`
 
 function Button({
   className,
-  variant,
-  size,
+  variant = 'default',
+  size = 'default',
   asChild = false,
   ...props
-}: React.ComponentProps<'button'> &
-  VariantProps<typeof buttonVariants> & {
-    asChild?: boolean
-  }) {
-  const Comp = asChild ? Slot : 'button'
+}: ButtonProps) {
+  if (asChild) {
+    return (
+      <Slot
+        data-slot="button"
+        className={className}
+        {...props}
+      />
+    )
+  }
 
   return (
-    <Comp
+    <StyledButton
       data-slot="button"
-      className={cn(buttonVariants({ variant, size, className }))}
+      $variant={variant}
+      $size={size}
+      className={className}
       {...props}
     />
   )
 }
 
+// buttonVariants kept for compatibility with components that use it for className generation
+function buttonVariants({ variant = 'default', size = 'default' }: { variant?: ButtonVariant; size?: ButtonSize } = {}) {
+  return `button-variant-${variant} button-size-${size}`
+}
+
 export { Button, buttonVariants }
+export type { ButtonVariant, ButtonSize }

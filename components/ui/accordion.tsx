@@ -3,8 +3,86 @@
 import * as React from 'react'
 import * as AccordionPrimitive from '@radix-ui/react-accordion'
 import { ChevronDownIcon } from 'lucide-react'
+import styled from 'styled-components'
 
-import { cn } from '@/lib/utils'
+const StyledAccordionItem = styled(AccordionPrimitive.Item)`
+  border-bottom: 1px solid var(--border);
+
+  &:last-child {
+    border-bottom: none;
+  }
+`
+
+const StyledAccordionHeader = styled(AccordionPrimitive.Header)`
+  display: flex;
+`
+
+const StyledAccordionTrigger = styled(AccordionPrimitive.Trigger)`
+  display: flex;
+  flex: 1;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  border-radius: var(--radius-md);
+  padding: 1rem 0;
+  text-align: left;
+  font-size: 0.875rem;
+  line-height: 1.25rem;
+  font-weight: 500;
+  transition: all 150ms cubic-bezier(0.4, 0, 0.2, 1);
+  outline: none;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: inherit;
+
+  &:hover {
+    text-decoration: underline;
+  }
+
+  &:focus-visible {
+    border-color: var(--ring);
+    box-shadow: 0 0 0 3px color-mix(in oklch, var(--ring) 50%, transparent);
+  }
+
+  &:disabled {
+    pointer-events: none;
+    opacity: 0.5;
+  }
+
+  &[data-state='open'] > svg {
+    transform: rotate(180deg);
+  }
+`
+
+const StyledChevron = styled(ChevronDownIcon)`
+  color: var(--muted-foreground);
+  pointer-events: none;
+  width: 1rem;
+  height: 1rem;
+  flex-shrink: 0;
+  transform: translateY(0.125rem);
+  transition: transform 200ms;
+`
+
+const StyledAccordionContent = styled(AccordionPrimitive.Content)`
+  overflow: hidden;
+  font-size: 0.875rem;
+  line-height: 1.25rem;
+
+  &[data-state='closed'] {
+    animation: accordion-up 0.2s ease-out;
+  }
+
+  &[data-state='open'] {
+    animation: accordion-down 0.2s ease-out;
+  }
+`
+
+const StyledAccordionContentInner = styled.div`
+  padding-top: 0;
+  padding-bottom: 1rem;
+`
 
 function Accordion({
   ...props
@@ -17,9 +95,9 @@ function AccordionItem({
   ...props
 }: React.ComponentProps<typeof AccordionPrimitive.Item>) {
   return (
-    <AccordionPrimitive.Item
+    <StyledAccordionItem
       data-slot="accordion-item"
-      className={cn('border-b last:border-b-0', className)}
+      className={className}
       {...props}
     />
   )
@@ -31,19 +109,16 @@ function AccordionTrigger({
   ...props
 }: React.ComponentProps<typeof AccordionPrimitive.Trigger>) {
   return (
-    <AccordionPrimitive.Header className="flex">
-      <AccordionPrimitive.Trigger
+    <StyledAccordionHeader>
+      <StyledAccordionTrigger
         data-slot="accordion-trigger"
-        className={cn(
-          'focus-visible:border-ring focus-visible:ring-ring/50 flex flex-1 items-start justify-between gap-4 rounded-md py-4 text-left text-sm font-medium transition-all outline-none hover:underline focus-visible:ring-[3px] disabled:pointer-events-none disabled:opacity-50 [&[data-state=open]>svg]:rotate-180',
-          className,
-        )}
+        className={className}
         {...props}
       >
         {children}
-        <ChevronDownIcon className="text-muted-foreground pointer-events-none size-4 shrink-0 translate-y-0.5 transition-transform duration-200" />
-      </AccordionPrimitive.Trigger>
-    </AccordionPrimitive.Header>
+        <StyledChevron />
+      </StyledAccordionTrigger>
+    </StyledAccordionHeader>
   )
 }
 
@@ -53,13 +128,12 @@ function AccordionContent({
   ...props
 }: React.ComponentProps<typeof AccordionPrimitive.Content>) {
   return (
-    <AccordionPrimitive.Content
+    <StyledAccordionContent
       data-slot="accordion-content"
-      className="data-[state=closed]:animate-accordion-up data-[state=open]:animate-accordion-down overflow-hidden text-sm"
       {...props}
     >
-      <div className={cn('pt-0 pb-4', className)}>{children}</div>
-    </AccordionPrimitive.Content>
+      <StyledAccordionContentInner className={className}>{children}</StyledAccordionContentInner>
+    </StyledAccordionContent>
   )
 }
 

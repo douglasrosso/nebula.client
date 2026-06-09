@@ -3,6 +3,7 @@
 import { use, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
+import styled from "styled-components";
 import { useGame } from "@/lib/hooks/useGames";
 import { useStore } from "@/lib/store";
 import { GameCard } from "@/components/game-card";
@@ -21,6 +22,446 @@ const TABS = ["about", "requirements"] as const;
 type Tab = typeof TABS[number];
 const TAB_LABELS: Record<Tab, string> = { about: "Sobre", requirements: "Requisitos" };
 
+/* ─── Styled ─── */
+const MainPage = styled.main`
+  min-height: 100vh;
+  padding-top: 5rem;
+  padding-bottom: 4rem;
+`;
+
+const LoadingPage = styled.main`
+  min-height: 100vh;
+  padding-top: 6rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+`;
+
+const Container = styled.div`
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 0 1rem;
+  @media (min-width: 1024px) { padding: 0 1.5rem; }
+`;
+
+const Breadcrumb = styled.nav`
+  margin-bottom: 1.5rem;
+`;
+
+const BreadcrumbList = styled.ol`
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.8125rem;
+  color: var(--muted-foreground);
+  list-style: none;
+  margin: 0;
+  padding: 0;
+`;
+
+const BreadcrumbLink = styled(Link)`
+  color: inherit;
+  text-decoration: none;
+  transition: opacity 150ms;
+  &:hover { opacity: 0.7; }
+`;
+
+const BreadcrumbCurrent = styled.li`
+  color: var(--foreground);
+  font-weight: 500;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 12.5rem;
+`;
+
+const ContentGrid = styled.div`
+  display: grid;
+  gap: 2rem;
+  @media (min-width: 1024px) { grid-template-columns: 2fr 1fr; }
+`;
+
+const LeftColumn = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+`;
+
+const ScreenshotWrapper = styled.div`
+  position: relative;
+  aspect-ratio: 16/9;
+  border-radius: 1rem;
+  overflow: hidden;
+  background-color: var(--surface-base);
+`;
+
+const NavButton = styled.button`
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 2.25rem;
+  height: 2.25rem;
+  border-radius: 9999px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: opacity 150ms;
+  background: oklch(0 0 0 / 0.7);
+  backdrop-filter: blur(12px);
+  border: none;
+  cursor: pointer;
+  &:hover { opacity: 0.8; }
+`;
+
+const PrevButton = styled(NavButton)`
+  left: 0.75rem;
+`;
+
+const NextButton = styled(NavButton)`
+  right: 0.75rem;
+`;
+
+const ThumbnailsRow = styled.div`
+  display: flex;
+  gap: 0.5rem;
+  overflow-x: auto;
+  padding-bottom: 0.25rem;
+`;
+
+const Thumbnail = styled.button<{ $active?: boolean }>`
+  position: relative;
+  width: 5rem;
+  height: 3rem;
+  border-radius: 0.5rem;
+  overflow: hidden;
+  flex-shrink: 0;
+  transition: all 150ms;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  opacity: ${({ $active }) => $active ? 1 : 0.45};
+  outline: ${({ $active }) => $active ? "2px solid var(--primary)" : "none"};
+  outline-offset: 2px;
+`;
+
+const TabsWrapper = styled.div`
+  margin-top: 1.5rem;
+`;
+
+const TabsBar = styled.div`
+  display: flex;
+  gap: 0.25rem;
+  border-radius: 0.75rem;
+  padding: 0.25rem;
+  margin-bottom: 1.25rem;
+  background-color: var(--surface-base);
+`;
+
+const TabBtn = styled.button<{ $active?: boolean }>`
+  flex: 1;
+  padding: 0.5rem;
+  border-radius: 0.5rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  transition: all 150ms;
+  border: none;
+  cursor: pointer;
+  background-color: ${({ $active }) => $active ? "var(--surface-raised)" : "transparent"};
+  color: ${({ $active }) => $active ? "var(--foreground)" : "var(--muted-foreground)"};
+`;
+
+const AboutCard = styled.div`
+  border-radius: 1rem;
+  padding: 1.5rem;
+  background-color: var(--surface-raised);
+`;
+
+const AboutTitle = styled.p`
+  font-size: 1.0625rem;
+  font-weight: 700;
+  color: var(--foreground);
+  margin: 0 0 0.75rem;
+`;
+
+const AboutText = styled.p`
+  font-size: 0.9375rem;
+  line-height: 1.625;
+  color: var(--muted-foreground);
+  margin: 0;
+`;
+
+const FeaturesCard = styled.div`
+  border-radius: 1rem;
+  padding: 1.25rem;
+  background-color: var(--surface-raised);
+`;
+
+const FeaturesTitle = styled.p`
+  font-size: 0.9375rem;
+  font-weight: 600;
+  color: var(--foreground);
+  margin: 0 0 0.75rem;
+`;
+
+const FeaturesList = styled.div`
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+`;
+
+const FeatureTag = styled.span`
+  font-size: 0.8125rem;
+  padding: 0.25rem 0.75rem;
+  border-radius: 9999px;
+  background-color: var(--surface-inset);
+  color: var(--muted-foreground);
+`;
+
+const RequirementsGrid = styled.div`
+  display: grid;
+  gap: 1rem;
+  @media (min-width: 768px) { grid-template-columns: repeat(2, 1fr); }
+`;
+
+const RequirementsCard = styled.div`
+  border-radius: 1rem;
+  padding: 1.25rem;
+  background-color: var(--surface-raised);
+`;
+
+const ReqTitle = styled.p`
+  font-size: 0.9375rem;
+  font-weight: 600;
+  color: var(--foreground);
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 0 0 1rem;
+`;
+
+const ReqList = styled.dl`
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin: 0;
+`;
+
+const ReqTerm = styled.dt`
+  font-size: 0.75rem;
+  margin: 0 0 0.125rem;
+  color: var(--text-tertiary);
+`;
+
+const ReqDetail = styled.dd`
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--foreground);
+  margin: 0;
+`;
+
+/* Right sidebar */
+const RightSidebar = styled.div``;
+
+const GamePanel = styled.div`
+  border-radius: 1rem;
+  padding: 1.5rem;
+  background-color: var(--surface-raised);
+  @media (min-width: 1024px) { position: sticky; top: 5rem; }
+`;
+
+const GameTitle = styled.h1`
+  font-size: 1.375rem;
+  font-weight: 700;
+  color: var(--foreground);
+  margin: 0 0 0.5rem;
+`;
+
+const RatingRow = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+`;
+
+const RatingValue = styled.span`
+  font-size: 0.9375rem;
+  font-weight: 600;
+  color: var(--foreground);
+`;
+
+const ReviewCount = styled.span`
+  font-size: 0.8125rem;
+  color: var(--muted-foreground);
+`;
+
+const GenresList = styled.div`
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.375rem;
+  margin-bottom: 1.25rem;
+`;
+
+const GenreChip = styled.span`
+  font-size: 0.75rem;
+  padding: 0.25rem 0.625rem;
+  border-radius: 9999px;
+  background-color: var(--surface-inset);
+  color: var(--muted-foreground);
+`;
+
+const PriceSection = styled.div`
+  margin-bottom: 1.25rem;
+`;
+
+const DiscountBadge = styled.span`
+  display: inline-block;
+  font-size: 0.75rem;
+  font-weight: 700;
+  padding: 0.25rem 0.625rem;
+  border-radius: 0.5rem;
+  margin-bottom: 0.5rem;
+  background-color: var(--success);
+  color: var(--success-foreground);
+`;
+
+const PriceRow = styled.div`
+  display: flex;
+  align-items: baseline;
+  gap: 0.75rem;
+`;
+
+const OriginalPrice = styled.span`
+  font-size: 0.9375rem;
+  text-decoration: line-through;
+  color: var(--text-tertiary);
+`;
+
+const CurrentPrice = styled.span<{ $free?: boolean }>`
+  font-size: 2rem;
+  font-weight: 700;
+  color: ${({ $free }) => $free ? "var(--success)" : "var(--primary)"};
+`;
+
+const Actions = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+`;
+
+const PrimaryButton = styled.button`
+  width: 100%;
+  height: 3rem;
+  border-radius: 0.75rem;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  color: var(--primary-foreground);
+  background-color: var(--primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  transition: opacity 150ms;
+  border: none;
+  cursor: pointer;
+  &:hover:not(:disabled) { opacity: 0.8; }
+  &:disabled { opacity: 0.7; cursor: not-allowed; }
+`;
+
+const WishlistButton = styled.button<{ $inWishlist?: boolean }>`
+  width: 100%;
+  height: 2.5rem;
+  border-radius: 0.75rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  transition: opacity 150ms;
+  background-color: var(--surface-inset);
+  color: ${({ $inWishlist }) => $inWishlist ? "var(--destructive)" : "var(--muted-foreground)"};
+  border: none;
+  cursor: pointer;
+  &:hover { opacity: 0.7; }
+`;
+
+const MetaList = styled.dl`
+  margin: 1.25rem 0 0;
+  padding-top: 1.25rem;
+  border-top: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+`;
+
+const MetaItem = styled.div`
+  display: flex;
+  align-items: flex-start;
+  gap: 0.625rem;
+`;
+
+const MetaIcon = styled.span`
+  margin-top: 0.125rem;
+  flex-shrink: 0;
+  color: var(--text-tertiary);
+  display: flex;
+  align-items: center;
+`;
+
+const MetaLabel = styled.dt`
+  font-size: 0.6875rem;
+  color: var(--muted-foreground);
+  margin: 0;
+`;
+
+const MetaValue = styled.dd`
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: var(--foreground);
+  margin: 0;
+`;
+
+/* Related section */
+const RelatedSection = styled.section`
+  margin-top: 3rem;
+`;
+
+const RelatedTitle = styled.h2`
+  font-size: 1.375rem;
+  font-weight: 700;
+  letter-spacing: -0.025em;
+  color: var(--foreground);
+  margin: 0 0 1.25rem;
+`;
+
+const RelatedGrid = styled.div`
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 0.75rem;
+  @media (min-width: 768px) { grid-template-columns: repeat(4, 1fr); }
+`;
+
+const NotFoundCenter = styled.div`
+  text-align: center;
+`;
+
+const NotFoundTitle = styled.p`
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--foreground);
+  margin: 0 0 1rem;
+`;
+
+const BackLink = styled(Link)`
+  display: inline-block;
+  padding: 0.625rem 1.25rem;
+  border-radius: 0.75rem;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  color: var(--primary-foreground);
+  background-color: var(--primary);
+  text-decoration: none;
+`;
 
 export default function GameDetailPage({ params }: PageProps) {
   const { id } = use(params);
@@ -33,22 +474,20 @@ export default function GameDetailPage({ params }: PageProps) {
 
   if (loading) {
     return (
-      <main className="min-h-screen pt-24 flex items-center justify-center">
-        <Loader2 className="w-8 h-8 animate-spin text-primary" />
-      </main>
+      <LoadingPage>
+        <Loader2 style={{ width: "2rem", height: "2rem", animation: "spin 1s linear infinite", color: "var(--primary)" }} />
+      </LoadingPage>
     );
   }
 
   if (!game) {
     return (
-      <main className="min-h-screen pt-24 flex items-center justify-center">
-        <div className="text-center">
-          <p className="text-[20px] font-bold text-foreground mb-4">Jogo não encontrado</p>
-          <Link href="/loja" className="px-5 py-2.5 rounded-xl text-[15px] font-semibold text-primary-foreground bg-primary">
-            Voltar para a loja
-          </Link>
-        </div>
-      </main>
+      <LoadingPage>
+        <NotFoundCenter>
+          <NotFoundTitle>Jogo não encontrado</NotFoundTitle>
+          <BackLink href="/loja">Voltar para a loja</BackLink>
+        </NotFoundCenter>
+      </LoadingPage>
     );
   }
 
@@ -73,216 +512,186 @@ export default function GameDetailPage({ params }: PageProps) {
   }
 
   return (
-    <main id="main-content" className="min-h-screen pt-20 pb-16">
-      <div className="container mx-auto px-4 lg:px-6">
-        <nav className="mb-6" aria-label="Breadcrumb">
-          <ol className="flex items-center gap-2 text-[13px] text-muted-foreground">
-            <li><Link href="/" className="hover:opacity-70 transition-opacity">Início</Link></li>
-            <ChevronRight className="w-3.5 h-3.5" />
-            <li><Link href="/loja" className="hover:opacity-70 transition-opacity">Loja</Link></li>
-            <ChevronRight className="w-3.5 h-3.5" />
-            <li className="text-foreground font-medium truncate max-w-[200px]">{game.title}</li>
-          </ol>
-        </nav>
+    <MainPage id="main-content">
+      <Container>
+        <Breadcrumb aria-label="Breadcrumb">
+          <BreadcrumbList>
+            <li><BreadcrumbLink href="/">Início</BreadcrumbLink></li>
+            <ChevronRight style={{ width: "0.875rem", height: "0.875rem" }} />
+            <li><BreadcrumbLink href="/loja">Loja</BreadcrumbLink></li>
+            <ChevronRight style={{ width: "0.875rem", height: "0.875rem" }} />
+            <BreadcrumbCurrent>{game.title}</BreadcrumbCurrent>
+          </BreadcrumbList>
+        </Breadcrumb>
 
-        <div className="grid lg:grid-cols-3 gap-8">
-          <div className="lg:col-span-2 space-y-4">
-            <div className="relative aspect-video rounded-2xl overflow-hidden bg-surface-base">
+        <ContentGrid>
+          <LeftColumn>
+            <ScreenshotWrapper>
               <Image
                 src={screenshots[screenshot]}
                 alt={`${game.title} — screenshot ${screenshot + 1}`}
                 fill
-                className="object-cover"
+                style={{ objectFit: "cover" }}
                 priority
                 sizes="(max-width: 1024px) 100vw, 66vw"
               />
               {screenshots.length > 1 && (
                 <>
-                  <button
+                  <PrevButton
                     onClick={() => setScreenshot((p) => (p === 0 ? screenshots.length - 1 : p - 1))}
-                    className="absolute left-3 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full flex items-center justify-center transition-opacity hover:opacity-80 bg-black/70 backdrop-blur-md"
                     aria-label="Screenshot anterior"
                   >
-                    <ChevronLeft className="w-4 h-4 text-white" />
-                  </button>
-                  <button
+                    <ChevronLeft style={{ width: "1rem", height: "1rem", color: "white" }} />
+                  </PrevButton>
+                  <NextButton
                     onClick={() => setScreenshot((p) => (p === screenshots.length - 1 ? 0 : p + 1))}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full flex items-center justify-center transition-opacity hover:opacity-80 bg-black/70 backdrop-blur-md"
                     aria-label="Próximo screenshot"
                   >
-                    <ChevronRight className="w-4 h-4 text-white" />
-                  </button>
+                    <ChevronRight style={{ width: "1rem", height: "1rem", color: "white" }} />
+                  </NextButton>
                 </>
               )}
-            </div>
+            </ScreenshotWrapper>
 
             {screenshots.length > 1 && (
-              <div className="flex gap-2 overflow-x-auto pb-1">
+              <ThumbnailsRow>
                 {screenshots.map((s, i) => (
-                  <button
-                    key={i}
-                    onClick={() => setScreenshot(i)}
-                    className="relative w-20 h-12 rounded-lg overflow-hidden flex-shrink-0 transition-all"
-                    style={{ opacity: screenshot === i ? 1 : 0.45, outline: screenshot === i ? "2px solid var(--primary)" : "none", outlineOffset: "2px" }}
-                  >
-                    <Image src={s} alt={`Thumb ${i + 1}`} fill className="object-cover" sizes="80px" />
-                  </button>
+                  <Thumbnail key={i} onClick={() => setScreenshot(i)} $active={screenshot === i}>
+                    <Image src={s} alt={`Thumb ${i + 1}`} fill style={{ objectFit: "cover" }} sizes="80px" />
+                  </Thumbnail>
                 ))}
-              </div>
+              </ThumbnailsRow>
             )}
 
-            <div className="mt-6">
-              <div className="flex gap-1 rounded-xl p-1 mb-5 bg-surface-base">
+            <TabsWrapper>
+              <TabsBar>
                 {TABS.map((key) => (
-                  <button
-                    key={key}
-                    onClick={() => setTab(key)}
-                    className={`flex-1 py-2 rounded-lg text-[14px] font-medium transition-colors ${tab === key ? "bg-surface-raised text-foreground" : "text-muted-foreground"}`}
-                  >
+                  <TabBtn key={key} onClick={() => setTab(key)} $active={tab === key}>
                     {TAB_LABELS[key]}
-                  </button>
+                  </TabBtn>
                 ))}
-              </div>
+              </TabsBar>
 
               {tab === "about" && (
-                <div className="space-y-4">
-                  <div className="rounded-2xl p-6 bg-surface-raised">
-                    <p className="text-[17px] font-bold text-foreground mb-3">Sobre o jogo</p>
-                    <p className="text-[15px] leading-relaxed text-muted-foreground">
-                      {game.longDescription || game.description}
-                    </p>
-                  </div>
+                <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
+                  <AboutCard>
+                    <AboutTitle>Sobre o jogo</AboutTitle>
+                    <AboutText>{game.longDescription || game.description}</AboutText>
+                  </AboutCard>
                   {game.features.length > 0 && (
-                    <div className="rounded-2xl p-5 bg-surface-raised">
-                      <p className="text-[15px] font-semibold text-foreground mb-3">Recursos</p>
-                      <div className="flex flex-wrap gap-2">
-                        {game.features.map((f) => (
-                          <span key={f} className="text-[13px] px-3 py-1 rounded-full bg-surface-inset text-muted-foreground">
-                            {f}
-                          </span>
-                        ))}
-                      </div>
-                    </div>
+                    <FeaturesCard>
+                      <FeaturesTitle>Recursos</FeaturesTitle>
+                      <FeaturesList>
+                        {game.features.map((f) => <FeatureTag key={f}>{f}</FeatureTag>)}
+                      </FeaturesList>
+                    </FeaturesCard>
                   )}
                 </div>
               )}
 
               {tab === "requirements" && (
-                <div className="grid md:grid-cols-2 gap-4">
+                <RequirementsGrid>
                   {[
                     { label: "Requisitos Mínimos", icon: Monitor, data: game.systemRequirements.minimum },
                     { label: "Recomendados", icon: Cpu, data: game.systemRequirements.recommended },
                   ].map(({ label, icon: Icon, data }) => (
-                    <div key={label} className="rounded-2xl p-5 bg-surface-raised">
-                      <p className="text-[15px] font-semibold text-foreground flex items-center gap-2 mb-4">
-                        <Icon className="w-4 h-4 text-muted-foreground" /> {label}
-                      </p>
-                      <dl className="space-y-3">
+                    <RequirementsCard key={label}>
+                      <ReqTitle>
+                        <Icon style={{ width: "1rem", height: "1rem", color: "var(--muted-foreground)" }} /> {label}
+                      </ReqTitle>
+                      <ReqList>
                         {[["SO", data.os], ["Processador", data.processor], ["Memória", data.memory], ["Placa de vídeo", data.graphics], ["Armazenamento", data.storage]].map(([k, v]) =>
                           v ? (
                             <div key={k}>
-                              <dt className="text-[12px] mb-0.5 text-text-tertiary">{k}</dt>
-                              <dd className="text-[14px] font-medium text-foreground">{v}</dd>
+                              <ReqTerm>{k}</ReqTerm>
+                              <ReqDetail>{v}</ReqDetail>
                             </div>
                           ) : null
                         )}
-                      </dl>
-                    </div>
+                      </ReqList>
+                    </RequirementsCard>
                   ))}
-                </div>
+                </RequirementsGrid>
               )}
-            </div>
-          </div>
+            </TabsWrapper>
+          </LeftColumn>
 
-          <div>
-            <div className="rounded-2xl p-6 sticky top-20 bg-surface-raised">
-              <h1 className="text-[22px] font-bold text-foreground mb-2">{game.title}</h1>
+          <RightSidebar>
+            <GamePanel>
+              <GameTitle>{game.title}</GameTitle>
 
-              <div className="flex items-center gap-2 mb-4">
-                <Star className="w-4 h-4" style={{ fill: "oklch(0.80 0.18 85)", color: "oklch(0.80 0.18 85)" }} />
-                <span className="text-[15px] font-semibold text-foreground">{game.rating}</span>
-                <span className="text-[13px] text-muted-foreground">
-                  ({game.reviewCount.toLocaleString("pt-BR")})
-                </span>
-              </div>
+              <RatingRow>
+                <Star style={{ width: "1rem", height: "1rem", fill: "oklch(0.80 0.18 85)", color: "oklch(0.80 0.18 85)" }} />
+                <RatingValue>{game.rating}</RatingValue>
+                <ReviewCount>({game.reviewCount.toLocaleString("pt-BR")})</ReviewCount>
+              </RatingRow>
 
-              <div className="flex flex-wrap gap-1.5 mb-5">
-                {game.genres.map((g) => (
-                  <span key={g} className="text-[12px] px-2.5 py-1 rounded-full bg-surface-inset text-muted-foreground">
-                    {g}
-                  </span>
-                ))}
-              </div>
+              <GenresList>
+                {game.genres.map((g) => <GenreChip key={g}>{g}</GenreChip>)}
+              </GenresList>
 
-              <div className="mb-5">
+              <PriceSection>
                 {game.discount && (
-                  <span className="inline-block text-[12px] font-bold px-2.5 py-1 rounded-lg mb-2 bg-success text-success-foreground">
-                    -{game.discount}% de desconto
-                  </span>
+                  <DiscountBadge>-{game.discount}% de desconto</DiscountBadge>
                 )}
-                <div className="flex items-baseline gap-3">
-                  {game.originalPrice && (
-                    <span className="text-[15px] line-through text-text-tertiary">{formatPrice(game.originalPrice)}</span>
-                  )}
-                  <span className={`text-[32px] font-bold ${game.price === 0 ? "text-success" : "text-primary"}`}>
-                    {formatPrice(game.price)}
-                  </span>
-                </div>
-              </div>
+                <PriceRow>
+                  {game.originalPrice && <OriginalPrice>{formatPrice(game.originalPrice)}</OriginalPrice>}
+                  <CurrentPrice $free={game.price === 0}>{formatPrice(game.price)}</CurrentPrice>
+                </PriceRow>
+              </PriceSection>
 
-              <div className="space-y-2">
+              <Actions>
                 {inLibrary ? (
-                  <button className="w-full h-12 rounded-xl text-[15px] font-semibold text-primary-foreground bg-primary flex items-center justify-center gap-2 transition-opacity hover:opacity-80">
-                    <Play className="w-4 h-4" /> Jogar agora
-                  </button>
+                  <PrimaryButton>
+                    <Play style={{ width: "1rem", height: "1rem" }} /> Jogar agora
+                  </PrimaryButton>
                 ) : (
-                  <button
-                    onClick={handleBuy}
-                    disabled={buying}
-                    className="w-full h-12 rounded-xl text-[15px] font-semibold text-primary-foreground bg-primary flex items-center justify-center gap-2 transition-opacity disabled:opacity-70 hover:opacity-80"
-                  >
-                    {buying ? <Loader2 className="w-4 h-4 animate-spin" /> : <><Check className="w-4 h-4" /> Comprar agora</>}
-                  </button>
+                  <PrimaryButton onClick={handleBuy} disabled={buying}>
+                    {buying
+                      ? <Loader2 style={{ width: "1rem", height: "1rem", animation: "spin 1s linear infinite" }} />
+                      : <><Check style={{ width: "1rem", height: "1rem" }} /> Comprar agora</>
+                    }
+                  </PrimaryButton>
                 )}
                 {!inLibrary && (
-                  <button
+                  <WishlistButton
+                    $inWishlist={inWishlist}
                     onClick={() => inWishlist ? removeFromWishlist(game.id) : requireLogin(() => addToWishlist(game.id))}
-                    className={`w-full h-10 rounded-xl text-[14px] font-medium flex items-center justify-center gap-2 transition-opacity hover:opacity-70 bg-surface-inset ${inWishlist ? "text-destructive" : "text-muted-foreground"}`}
                   >
-                    <Heart className={`w-4 h-4 ${inWishlist ? "fill-current" : ""}`} />
+                    <Heart style={{ width: "1rem", height: "1rem", fill: inWishlist ? "currentColor" : "none" }} />
                     {inWishlist ? "Remover da lista" : "Lista de desejos"}
-                  </button>
+                  </WishlistButton>
                 )}
-              </div>
+              </Actions>
 
-              <dl className="mt-5 pt-5 space-y-3 border-t border-border">
+              <MetaList>
                 {[
                   { icon: Building, label: "Desenvolvedor", value: game.developer },
                   { icon: Tag, label: "Publicador", value: game.publisher },
                   { icon: Calendar, label: "Lançamento", value: game.releaseDate },
                 ].map(({ icon: Icon, label, value }) => (
-                  <div key={label} className="flex items-start gap-2.5">
-                    <Icon className="w-4 h-4 mt-0.5 flex-shrink-0 text-text-tertiary" />
+                  <MetaItem key={label}>
+                    <MetaIcon><Icon style={{ width: "1rem", height: "1rem" }} /></MetaIcon>
                     <div>
-                      <dt className="text-[11px] text-muted-foreground">{label}</dt>
-                      <dd className="text-[13px] font-medium text-foreground">{value}</dd>
+                      <MetaLabel>{label}</MetaLabel>
+                      <MetaValue>{value}</MetaValue>
                     </div>
-                  </div>
+                  </MetaItem>
                 ))}
-              </dl>
-            </div>
-          </div>
-        </div>
+              </MetaList>
+            </GamePanel>
+          </RightSidebar>
+        </ContentGrid>
 
         {relatedGames.length > 0 && (
-          <section className="mt-12">
-            <h2 className="text-[22px] font-bold tracking-tight text-foreground mb-5">Jogos semelhantes</h2>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+          <RelatedSection>
+            <RelatedTitle>Jogos semelhantes</RelatedTitle>
+            <RelatedGrid>
               {relatedGames.map((g) => <GameCard key={g.id} game={g} />)}
-            </div>
-          </section>
+            </RelatedGrid>
+          </RelatedSection>
         )}
-      </div>
-    </main>
+      </Container>
+    </MainPage>
   );
 }

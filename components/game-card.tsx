@@ -3,6 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { Play, Loader2 } from "lucide-react";
+import styled from "styled-components";
 import { type Game, useStore } from "@/lib/store";
 import { formatPrice } from "@/lib/utils";
 import { useState } from "react";
@@ -13,10 +14,233 @@ interface GameCardProps {
   variant?: "default" | "featured" | "compact";
 }
 
+/* ─── Featured variant ─── */
+const FeaturedLink = styled(Link)`
+  display: block;
+  position: relative;
+  overflow: hidden;
+  border-radius: 1rem;
+  background-color: var(--surface-raised);
+  text-decoration: none;
+`;
+
+const FeaturedImageWrapper = styled.div`
+  position: relative;
+  aspect-ratio: 16/9;
+  overflow: hidden;
+`;
+
+const FeaturedGradient = styled.div`
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(to top, oklch(0.05 0 0) 0%, transparent 60%);
+`;
+
+const FeaturedDiscount = styled.span`
+  position: absolute;
+  top: 0.75rem;
+  left: 0.75rem;
+  font-size: 0.75rem;
+  font-weight: 700;
+  padding: 0.25rem 0.625rem;
+  border-radius: 0.5rem;
+  background-color: var(--success);
+  color: var(--success-foreground);
+`;
+
+const FeaturedInfo = styled.div`
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  padding: 1.25rem;
+`;
+
+const FeaturedTitle = styled.h3`
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: white;
+  margin: 0 0 0.25rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+`;
+
+const FeaturedPriceRow = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+`;
+
+const FeaturedPriceGroup = styled.div`
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+`;
+
+const FeaturedOriginalPrice = styled.span`
+  font-size: 0.8125rem;
+  text-decoration: line-through;
+  color: rgba(255,255,255,0.5);
+`;
+
+const FeaturedRating = styled.span`
+  font-size: 0.8125rem;
+  color: rgba(255,255,255,0.6);
+`;
+
+/* ─── Compact variant ─── */
+const CompactLink = styled(Link)`
+  display: flex;
+  gap: 0.75rem;
+  padding: 0.75rem;
+  border-radius: 0.75rem;
+  background-color: var(--surface-raised);
+  transition: background-color 150ms;
+  text-decoration: none;
+  &:hover { background-color: var(--surface-inset); }
+`;
+
+const CompactImageWrapper = styled.div`
+  position: relative;
+  width: 5rem;
+  height: 3rem;
+  border-radius: 0.5rem;
+  overflow: hidden;
+  flex-shrink: 0;
+`;
+
+const CompactInfo = styled.div`
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+`;
+
+const CompactTitle = styled.h3`
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--foreground);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  margin: 0;
+`;
+
+const CompactPrice = styled.span`
+  font-size: 0.75rem;
+  font-weight: 500;
+  margin-top: 0.125rem;
+  color: var(--primary);
+`;
+
+/* ─── Default variant ─── */
+const DefaultLink = styled(Link)`
+  display: flex;
+  flex-direction: column;
+  border-radius: 0.75rem;
+  overflow: hidden;
+  transition: transform 200ms;
+  background-color: var(--surface-raised);
+  text-decoration: none;
+  &:hover { transform: translateY(-0.125rem); }
+`;
+
+const DefaultImageWrapper = styled.div`
+  position: relative;
+  aspect-ratio: 460/215;
+  overflow: hidden;
+`;
+
+const DefaultDiscount = styled.span`
+  position: absolute;
+  top: 0.5rem;
+  left: 0.5rem;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  padding: 0.125rem 0.5rem;
+  border-radius: 0.375rem;
+  background-color: var(--success);
+  color: var(--success-foreground);
+`;
+
+const DefaultLibraryBadge = styled.span`
+  position: absolute;
+  top: 0.5rem;
+  right: 0.5rem;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  padding: 0.125rem 0.5rem;
+  border-radius: 0.375rem;
+  background-color: color-mix(in oklch, var(--primary) 90%, transparent);
+  color: var(--primary-foreground);
+`;
+
+const DefaultBody = styled.div`
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  padding: 0.75rem;
+`;
+
+const DefaultTitle = styled.h3`
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--foreground);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  margin: 0 0 0.25rem;
+`;
+
+const DefaultGenres = styled.p`
+  font-size: 0.6875rem;
+  margin: 0 0 0.75rem;
+  color: var(--text-tertiary);
+`;
+
+const DefaultFooter = styled.div`
+  margin-top: auto;
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 0.5rem;
+`;
+
+const PriceGroup = styled.div`
+  min-width: 0;
+`;
+
+const OriginalPrice = styled.span`
+  font-size: 0.6875rem;
+  text-decoration: line-through;
+  display: block;
+  color: var(--text-tertiary);
+`;
+
+const BuyButton = styled.button<{ $loading?: boolean }>`
+  flex-shrink: 0;
+  height: 1.75rem;
+  padding: 0 0.75rem;
+  border-radius: 9999px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  transition: all 150ms;
+  border: none;
+  cursor: pointer;
+  background-color: color-mix(in oklch, var(--primary) 12%, transparent);
+  color: var(--primary);
+  &:hover {
+    background-color: var(--primary);
+    color: var(--primary-foreground);
+  }
+  &:disabled { opacity: 0.6; cursor: not-allowed; }
+`;
+
 export function GameCard({ game, variant = "default" }: GameCardProps) {
   const { purchase, isInLibrary, requireLogin } = useStore();
   const [buying, setBuying] = useState(false);
-
   const inLibrary = isInLibrary(game.id);
 
   const handleBuy = async (e: React.MouseEvent) => {
@@ -36,105 +260,95 @@ export function GameCard({ game, variant = "default" }: GameCardProps) {
 
   if (variant === "featured") {
     return (
-      <Link href={`/jogo/${game.id}`} className="group relative block overflow-hidden rounded-2xl bg-surface-raised">
-        <div className="relative aspect-[16/9] overflow-hidden">
+      <FeaturedLink href={`/jogo/${game.id}`}>
+        <FeaturedImageWrapper>
           <Image
             src={game.coverImage} alt={game.title} fill
-            className="object-cover transition-transform duration-700 group-hover:scale-[1.03]"
+            style={{ objectFit: "cover", transition: "transform 700ms" }}
             sizes="(max-width: 768px) 100vw, 50vw"
           />
-          <div className="absolute inset-0" style={{ background: "linear-gradient(to top, oklch(0.05 0 0) 0%, transparent 60%)" }} />
+          <FeaturedGradient />
           {game.discount && (
-            <span className="absolute top-3 left-3 text-[12px] font-bold px-2.5 py-1 rounded-lg bg-success text-success-foreground">
-              -{game.discount}%
-            </span>
+            <FeaturedDiscount>-{game.discount}%</FeaturedDiscount>
           )}
-        </div>
-        <div className="absolute bottom-0 left-0 right-0 p-5">
-          <h3 className="text-[20px] font-bold text-white mb-1 line-clamp-1">{game.title}</h3>
-          <div className="flex items-center justify-between">
-            <div className="flex items-baseline gap-2">
+        </FeaturedImageWrapper>
+        <FeaturedInfo>
+          <FeaturedTitle>{game.title}</FeaturedTitle>
+          <FeaturedPriceRow>
+            <FeaturedPriceGroup>
               {game.originalPrice && (
-                <span className="text-[13px] line-through text-white/50">{formatPrice(game.originalPrice)}</span>
+                <FeaturedOriginalPrice>{formatPrice(game.originalPrice)}</FeaturedOriginalPrice>
               )}
-              <span className="text-[17px] font-bold" style={{ color: game.price === 0 ? "var(--success)" : "var(--primary)" }}>
+              <span style={{ fontSize: "1.0625rem", fontWeight: 700, color: game.price === 0 ? "var(--success)" : "var(--primary)" }}>
                 {formatPrice(game.price)}
               </span>
-            </div>
-            <span className="text-[13px] text-white/60">{game.positivePercentage}% positivas</span>
-          </div>
-        </div>
-      </Link>
+            </FeaturedPriceGroup>
+            <FeaturedRating>{game.positivePercentage}% positivas</FeaturedRating>
+          </FeaturedPriceRow>
+        </FeaturedInfo>
+      </FeaturedLink>
     );
   }
 
   if (variant === "compact") {
     return (
-      <Link href={`/jogo/${game.id}`} className="group flex gap-3 p-3 rounded-xl bg-surface-raised transition-colors">
-        <div className="relative w-20 h-12 rounded-lg overflow-hidden flex-shrink-0">
-          <Image src={game.coverImage} alt={game.title} fill className="object-cover" sizes="80px" />
-        </div>
-        <div className="flex-1 min-w-0 flex flex-col justify-center">
-          <h3 className="text-[13px] font-semibold text-foreground truncate">{game.title}</h3>
-          <span className="text-[12px] font-medium mt-0.5 text-primary">{formatPrice(game.price)}</span>
-        </div>
-      </Link>
+      <CompactLink href={`/jogo/${game.id}`}>
+        <CompactImageWrapper>
+          <Image src={game.coverImage} alt={game.title} fill style={{ objectFit: "cover" }} sizes="80px" />
+        </CompactImageWrapper>
+        <CompactInfo>
+          <CompactTitle>{game.title}</CompactTitle>
+          <CompactPrice>{formatPrice(game.price)}</CompactPrice>
+        </CompactInfo>
+      </CompactLink>
     );
   }
 
   return (
-    <Link
-      href={`/jogo/${game.id}`}
-      className="group flex flex-col rounded-xl overflow-hidden transition-transform duration-200 hover:-translate-y-0.5 bg-surface-raised"
-    >
-      <div className="relative aspect-[460/215] overflow-hidden">
+    <DefaultLink href={`/jogo/${game.id}`}>
+      <DefaultImageWrapper>
         <Image
           src={game.coverImage} alt={game.title} fill
-          className="object-cover transition-transform duration-500 group-hover:scale-[1.04]"
+          style={{ objectFit: "cover", transition: "transform 500ms" }}
           sizes="(max-width: 640px) 100vw, (max-width: 768px) 50vw, (max-width: 1024px) 33vw, 25vw"
         />
         {game.discount && (
-          <span className="absolute top-2 left-2 text-[11px] font-bold px-2 py-0.5 rounded-md bg-success text-success-foreground">
-            -{game.discount}%
-          </span>
+          <DefaultDiscount>-{game.discount}%</DefaultDiscount>
         )}
         {inLibrary && (
-          <span className="absolute top-2 right-2 text-[11px] font-bold px-2 py-0.5 rounded-md bg-primary/90 text-primary-foreground">
-            Biblioteca
-          </span>
+          <DefaultLibraryBadge>Biblioteca</DefaultLibraryBadge>
         )}
-      </div>
+      </DefaultImageWrapper>
 
-      <div className="flex flex-col flex-1 p-3">
-        <h3 className="text-[13px] font-semibold text-foreground line-clamp-1 mb-1">{game.title}</h3>
-        <p className="text-[11px] mb-3 text-text-tertiary">{game.genres.slice(0, 2).join(" · ")}</p>
+      <DefaultBody>
+        <DefaultTitle>{game.title}</DefaultTitle>
+        <DefaultGenres>{game.genres.slice(0, 2).join(" · ")}</DefaultGenres>
 
-        <div className="mt-auto flex items-end justify-between gap-2">
-          <div className="min-w-0">
+        <DefaultFooter>
+          <PriceGroup>
             {game.originalPrice && (
-              <span className="text-[11px] line-through block text-text-tertiary">{formatPrice(game.originalPrice)}</span>
+              <OriginalPrice>{formatPrice(game.originalPrice)}</OriginalPrice>
             )}
-            <span className={`text-[13px] font-bold ${game.price === 0 ? "text-success" : "text-primary"}`}>
+            <span style={{ fontSize: "0.8125rem", fontWeight: 700, color: game.price === 0 ? "var(--success)" : "var(--primary)" }}>
               {formatPrice(game.price)}
             </span>
-          </div>
+          </PriceGroup>
 
-          <button
+          <BuyButton
             onClick={handleBuy}
             disabled={buying}
-            className="flex-shrink-0 h-7 px-3 rounded-full text-[12px] font-semibold transition-all duration-150 bg-primary/12 text-primary hover:bg-primary hover:text-primary-foreground disabled:opacity-60"
             aria-label={inLibrary ? "Na biblioteca" : game.price === 0 ? "Obter" : "Comprar"}
           >
             {inLibrary
-              ? <Play className="w-3 h-3" />
+              ? <Play style={{ width: "0.75rem", height: "0.75rem" }} />
               : buying
-              ? <Loader2 className="w-3 h-3 animate-spin" />
+              ? <Loader2 style={{ width: "0.75rem", height: "0.75rem", animation: "spin 1s linear infinite" }} />
               : game.price === 0
               ? "Obter"
               : "Comprar"}
-          </button>
-        </div>
-      </div>
-    </Link>
+          </BuyButton>
+        </DefaultFooter>
+      </DefaultBody>
+    </DefaultLink>
   );
 }

@@ -2,8 +2,7 @@
 
 import * as React from 'react'
 import * as RechartsPrimitive from 'recharts'
-
-import { cn } from '@/lib/utils'
+import styled from 'styled-components'
 
 // Format: { THEME_NAME: CSS_SELECTOR }
 const THEMES = { light: '', dark: '.dark' } as const
@@ -34,6 +33,62 @@ function useChart() {
   return context
 }
 
+const StyledChartContainer = styled.div`
+  display: flex;
+  aspect-ratio: 16 / 9;
+  justify-content: center;
+  font-size: 0.75rem;
+  line-height: 1rem;
+
+  & .recharts-cartesian-axis-tick text {
+    fill: var(--muted-foreground);
+  }
+
+  & .recharts-cartesian-grid line[stroke='#ccc'] {
+    stroke: color-mix(in oklch, var(--border) 50%, transparent);
+  }
+
+  & .recharts-curve.recharts-tooltip-cursor {
+    stroke: var(--border);
+  }
+
+  & .recharts-polar-grid [stroke='#ccc'] {
+    stroke: var(--border);
+  }
+
+  & .recharts-radial-bar-background-sector {
+    fill: var(--muted);
+  }
+
+  & .recharts-rectangle.recharts-tooltip-cursor {
+    fill: var(--muted);
+  }
+
+  & .recharts-reference-line [stroke='#ccc'] {
+    stroke: var(--border);
+  }
+
+  & .recharts-dot[stroke='#fff'] {
+    stroke: transparent;
+  }
+
+  & .recharts-layer {
+    outline: none;
+  }
+
+  & .recharts-sector {
+    outline: none;
+  }
+
+  & .recharts-sector[stroke='#fff'] {
+    stroke: transparent;
+  }
+
+  & .recharts-surface {
+    outline: none;
+  }
+`
+
 function ChartContainer({
   id,
   className,
@@ -51,20 +106,17 @@ function ChartContainer({
 
   return (
     <ChartContext.Provider value={{ config }}>
-      <div
+      <StyledChartContainer
         data-slot="chart"
         data-chart={chartId}
-        className={cn(
-          "[&_.recharts-cartesian-axis-tick_text]:fill-muted-foreground [&_.recharts-cartesian-grid_line[stroke='#ccc']]:stroke-border/50 [&_.recharts-curve.recharts-tooltip-cursor]:stroke-border [&_.recharts-polar-grid_[stroke='#ccc']]:stroke-border [&_.recharts-radial-bar-background-sector]:fill-muted [&_.recharts-rectangle.recharts-tooltip-cursor]:fill-muted [&_.recharts-reference-line_[stroke='#ccc']]:stroke-border flex aspect-video justify-center text-xs [&_.recharts-dot[stroke='#fff']]:stroke-transparent [&_.recharts-layer]:outline-hidden [&_.recharts-sector]:outline-hidden [&_.recharts-sector[stroke='#fff']]:stroke-transparent [&_.recharts-surface]:outline-hidden",
-          className,
-        )}
+        className={className}
         {...props}
       >
         <ChartStyle id={chartId} config={config} />
         <RechartsPrimitive.ResponsiveContainer>
           {children}
         </RechartsPrimitive.ResponsiveContainer>
-      </div>
+      </StyledChartContainer>
     </ChartContext.Provider>
   )
 }
@@ -103,6 +155,45 @@ ${colorConfig
 }
 
 const ChartTooltip = RechartsPrimitive.Tooltip
+
+const StyledTooltipWrapper = styled.div`
+  border: 1px solid color-mix(in oklch, var(--border) 50%, transparent);
+  background-color: var(--background);
+  display: grid;
+  min-width: 8rem;
+  align-items: start;
+  gap: 0.375rem;
+  border-radius: var(--radius-lg);
+  padding: 0.375rem 0.625rem;
+  font-size: 0.75rem;
+  line-height: 1rem;
+  box-shadow: 0 20px 25px -5px oklch(0 0 0 / 0.1);
+`
+
+const TooltipPayloadItem = styled.div<{ $isDot?: boolean }>`
+  display: flex;
+  width: 100%;
+  flex-wrap: wrap;
+  align-items: stretch;
+  gap: 0.5rem;
+
+  & > svg {
+    color: var(--muted-foreground);
+    height: 0.625rem;
+    width: 0.625rem;
+  }
+
+  ${({ $isDot }) => $isDot && `align-items: center;`}
+`
+
+const TooltipValueWrapper = styled.div<{ $nestLabel?: boolean }>`
+  display: flex;
+  flex: 1;
+  justify-content: space-between;
+  line-height: 1;
+  ${({ $nestLabel }) =>
+    $nestLabel ? `align-items: flex-end;` : `align-items: center;`}
+`
 
 function ChartTooltipContent({
   active,
@@ -143,7 +234,7 @@ function ChartTooltipContent({
 
     if (labelFormatter) {
       return (
-        <div className={cn('font-medium', labelClassName)}>
+        <div className={labelClassName} style={{ fontWeight: 500 }}>
           {labelFormatter(value, payload)}
         </div>
       )
@@ -153,7 +244,7 @@ function ChartTooltipContent({
       return null
     }
 
-    return <div className={cn('font-medium', labelClassName)}>{value}</div>
+    return <div className={labelClassName} style={{ fontWeight: 500 }}>{value}</div>
   }, [
     label,
     labelFormatter,
@@ -171,26 +262,18 @@ function ChartTooltipContent({
   const nestLabel = payload.length === 1 && indicator !== 'dot'
 
   return (
-    <div
-      className={cn(
-        'border-border/50 bg-background grid min-w-[8rem] items-start gap-1.5 rounded-lg border px-2.5 py-1.5 text-xs shadow-xl',
-        className,
-      )}
-    >
+    <StyledTooltipWrapper className={className}>
       {!nestLabel ? tooltipLabel : null}
-      <div className="grid gap-1.5">
+      <div style={{ display: 'grid', gap: '0.375rem' }}>
         {payload.map((item, index) => {
           const key = `${nameKey || item.name || item.dataKey || 'value'}`
           const itemConfig = getPayloadConfigFromPayload(config, item, key)
           const indicatorColor = color || item.payload.fill || item.color
 
           return (
-            <div
+            <TooltipPayloadItem
               key={item.dataKey}
-              className={cn(
-                '[&>svg]:text-muted-foreground flex w-full flex-wrap items-stretch gap-2 [&>svg]:h-2.5 [&>svg]:w-2.5',
-                indicator === 'dot' && 'items-center',
-              )}
+              $isDot={indicator === 'dot'}
             >
               {formatter && item?.value !== undefined && item.name ? (
                 formatter(item.value, item.name, item, index, item.payload)
@@ -201,50 +284,45 @@ function ChartTooltipContent({
                   ) : (
                     !hideIndicator && (
                       <div
-                        className={cn(
-                          'shrink-0 rounded-[2px] border-(--color-border) bg-(--color-bg)',
-                          {
-                            'h-2.5 w-2.5': indicator === 'dot',
-                            'w-1': indicator === 'line',
-                            'w-0 border-[1.5px] border-dashed bg-transparent':
-                              indicator === 'dashed',
-                            'my-0.5': nestLabel && indicator === 'dashed',
-                          },
-                        )}
-                        style={
-                          {
-                            '--color-bg': indicatorColor,
-                            '--color-border': indicatorColor,
-                          } as React.CSSProperties
-                        }
+                        style={{
+                          flexShrink: 0,
+                          borderRadius: '2px',
+                          border: `1px solid ${indicatorColor}`,
+                          backgroundColor: indicatorColor,
+                          ...(indicator === 'dot' ? { width: '0.625rem', height: '0.625rem' } : {}),
+                          ...(indicator === 'line' ? { width: '0.25rem' } : {}),
+                          ...(indicator === 'dashed'
+                            ? {
+                                width: 0,
+                                borderStyle: 'dashed',
+                                backgroundColor: 'transparent',
+                                ...(nestLabel ? { marginTop: '0.125rem', marginBottom: '0.125rem' } : {}),
+                              }
+                            : {}),
+                        }}
                       />
                     )
                   )}
-                  <div
-                    className={cn(
-                      'flex flex-1 justify-between leading-none',
-                      nestLabel ? 'items-end' : 'items-center',
-                    )}
-                  >
-                    <div className="grid gap-1.5">
+                  <TooltipValueWrapper $nestLabel={nestLabel}>
+                    <div style={{ display: 'grid', gap: '0.375rem' }}>
                       {nestLabel ? tooltipLabel : null}
-                      <span className="text-muted-foreground">
+                      <span style={{ color: 'var(--muted-foreground)' }}>
                         {itemConfig?.label || item.name}
                       </span>
                     </div>
                     {item.value && (
-                      <span className="text-foreground font-mono font-medium tabular-nums">
+                      <span style={{ color: 'var(--foreground)', fontFamily: 'var(--font-mono, monospace)', fontWeight: 500 }}>
                         {item.value.toLocaleString()}
                       </span>
                     )}
-                  </div>
+                  </TooltipValueWrapper>
                 </>
               )}
-            </div>
+            </TooltipPayloadItem>
           )
         })}
       </div>
-    </div>
+    </StyledTooltipWrapper>
   )
 }
 
@@ -269,11 +347,15 @@ function ChartLegendContent({
 
   return (
     <div
-      className={cn(
-        'flex items-center justify-center gap-4',
-        verticalAlign === 'top' ? 'pb-3' : 'pt-3',
-        className,
-      )}
+      className={className}
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: '1rem',
+        paddingBottom: verticalAlign === 'top' ? '0.75rem' : 0,
+        paddingTop: verticalAlign !== 'top' ? '0.75rem' : 0,
+      }}
     >
       {payload.map((item) => {
         const key = `${nameKey || item.dataKey || 'value'}`
@@ -282,14 +364,17 @@ function ChartLegendContent({
         return (
           <div
             key={item.value}
-            className="[&>svg]:text-muted-foreground flex items-center gap-1.5 [&>svg]:h-3 [&>svg]:w-3"
+            style={{ display: 'flex', alignItems: 'center', gap: '0.375rem' }}
           >
             {itemConfig?.icon && !hideIcon ? (
               <itemConfig.icon />
             ) : (
               <div
-                className="h-2 w-2 shrink-0 rounded-[2px]"
                 style={{
+                  height: '0.5rem',
+                  width: '0.5rem',
+                  flexShrink: 0,
+                  borderRadius: '2px',
                   backgroundColor: item.color,
                 }}
               />
@@ -302,7 +387,6 @@ function ChartLegendContent({
   )
 }
 
-// Helper to extract item config from a payload.
 function getPayloadConfigFromPayload(
   config: ChartConfig,
   payload: unknown,

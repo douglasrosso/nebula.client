@@ -2,8 +2,85 @@
 
 import * as React from 'react'
 import * as SliderPrimitive from '@radix-ui/react-slider'
+import styled from 'styled-components'
 
-import { cn } from '@/lib/utils'
+const StyledSliderRoot = styled(SliderPrimitive.Root)`
+  position: relative;
+  display: flex;
+  width: 100%;
+  touch-action: none;
+  align-items: center;
+  user-select: none;
+
+  &[data-disabled] {
+    opacity: 0.5;
+  }
+
+  &[data-orientation='vertical'] {
+    height: 100%;
+    min-height: 11rem;
+    width: auto;
+    flex-direction: column;
+  }
+`
+
+const StyledSliderTrack = styled(SliderPrimitive.Track)`
+  background-color: var(--muted);
+  position: relative;
+  flex-grow: 1;
+  overflow: hidden;
+  border-radius: 9999px;
+
+  &[data-orientation='horizontal'] {
+    height: 0.375rem;
+    width: 100%;
+  }
+
+  &[data-orientation='vertical'] {
+    height: 100%;
+    width: 0.375rem;
+  }
+`
+
+const StyledSliderRange = styled(SliderPrimitive.Range)`
+  background-color: var(--primary);
+  position: absolute;
+
+  &[data-orientation='horizontal'] {
+    height: 100%;
+  }
+
+  &[data-orientation='vertical'] {
+    width: 100%;
+  }
+`
+
+const StyledSliderThumb = styled(SliderPrimitive.Thumb)`
+  border: 1px solid var(--primary);
+  background-color: white;
+  display: block;
+  width: 1rem;
+  height: 1rem;
+  flex-shrink: 0;
+  border-radius: 9999px;
+  box-shadow: 0 1px 2px 0 oklch(0 0 0 / 0.1);
+  transition: color 150ms, box-shadow 150ms;
+  outline: none;
+
+  &:hover {
+    box-shadow: 0 0 0 4px color-mix(in oklch, var(--ring) 50%, transparent);
+  }
+
+  &:focus-visible {
+    box-shadow: 0 0 0 4px color-mix(in oklch, var(--ring) 50%, transparent);
+    outline: none;
+  }
+
+  &:disabled {
+    pointer-events: none;
+    opacity: 0.5;
+  }
+`
 
 function Slider({
   className,
@@ -24,35 +101,22 @@ function Slider({
   )
 
   return (
-    <SliderPrimitive.Root
+    <StyledSliderRoot
       data-slot="slider"
       defaultValue={defaultValue}
       value={value}
       min={min}
       max={max}
-      className={cn(
-        'relative flex w-full touch-none items-center select-none data-[disabled]:opacity-50 data-[orientation=vertical]:h-full data-[orientation=vertical]:min-h-44 data-[orientation=vertical]:w-auto data-[orientation=vertical]:flex-col',
-        className,
-      )}
+      className={className}
       {...props}
     >
-      <SliderPrimitive.Track
-        data-slot="slider-track"
-        className="bg-muted relative grow overflow-hidden rounded-full data-[orientation=horizontal]:h-1.5 data-[orientation=horizontal]:w-full data-[orientation=vertical]:h-full data-[orientation=vertical]:w-1.5"
-      >
-        <SliderPrimitive.Range
-          data-slot="slider-range"
-          className="bg-primary absolute data-[orientation=horizontal]:h-full data-[orientation=vertical]:w-full"
-        />
-      </SliderPrimitive.Track>
+      <StyledSliderTrack data-slot="slider-track">
+        <StyledSliderRange data-slot="slider-range" />
+      </StyledSliderTrack>
       {Array.from({ length: _values.length }, (_, index) => (
-        <SliderPrimitive.Thumb
-          data-slot="slider-thumb"
-          key={index}
-          className="border-primary ring-ring/50 block size-4 shrink-0 rounded-full border bg-white shadow-sm transition-[color,box-shadow] hover:ring-4 focus-visible:ring-4 focus-visible:outline-hidden disabled:pointer-events-none disabled:opacity-50"
-        />
+        <StyledSliderThumb data-slot="slider-thumb" key={index} />
       ))}
-    </SliderPrimitive.Root>
+    </StyledSliderRoot>
   )
 }
 

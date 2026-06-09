@@ -1,78 +1,91 @@
 import { Slot } from '@radix-ui/react-slot'
-import { cva, type VariantProps } from 'class-variance-authority'
+import styled, { css } from 'styled-components'
 
-import { cn } from '@/lib/utils'
 import { Separator } from '@/components/ui/separator'
 
-const buttonGroupVariants = cva(
-  "flex w-fit items-stretch [&>*]:focus-visible:z-10 [&>*]:focus-visible:relative [&>[data-slot=select-trigger]:not([class*='w-'])]:w-fit [&>input]:flex-1 has-[select[aria-hidden=true]:last-child]:[&>[data-slot=select-trigger]:last-of-type]:rounded-r-md has-[>[data-slot=button-group]]:gap-2",
-  {
-    variants: {
-      orientation: {
-        horizontal:
-          '[&>*:not(:first-child)]:rounded-l-none [&>*:not(:first-child)]:border-l-0 [&>*:not(:last-child)]:rounded-r-none',
-        vertical:
-          'flex-col [&>*:not(:first-child)]:rounded-t-none [&>*:not(:first-child)]:border-t-0 [&>*:not(:last-child)]:rounded-b-none',
-      },
-    },
-    defaultVariants: {
-      orientation: 'horizontal',
-    },
-  },
-)
+type ButtonGroupOrientation = 'horizontal' | 'vertical'
+
+const StyledButtonGroup = styled.div<{ $orientation?: ButtonGroupOrientation }>`
+  display: flex;
+  width: fit-content;
+  align-items: stretch;
+
+  & > * { flex-shrink: 0; }
+  & > *:focus-visible { z-index: 10; position: relative; }
+
+  ${({ $orientation = 'horizontal' }) =>
+    $orientation === 'vertical'
+      ? css`
+          flex-direction: column;
+          & > *:not(:first-child) { border-top-left-radius: 0; border-top-right-radius: 0; border-top: 0; }
+          & > *:not(:last-child) { border-bottom-left-radius: 0; border-bottom-right-radius: 0; }
+        `
+      : css`
+          & > *:not(:first-child) { border-top-left-radius: 0; border-bottom-left-radius: 0; border-left: 0; }
+          & > *:not(:last-child) { border-top-right-radius: 0; border-bottom-right-radius: 0; }
+        `}
+`
+
+const StyledButtonGroupText = styled.div`
+  background-color: var(--muted);
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border);
+  padding: 0 1rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  box-shadow: 0 1px 2px 0 oklch(0 0 0 / 0.05);
+
+  & svg { pointer-events: none; width: 1rem; height: 1rem; }
+`
+
+const StyledButtonGroupSeparator = styled(Separator)`
+  background-color: var(--input);
+  position: relative;
+  margin: 0 !important;
+  align-self: stretch;
+`
 
 function ButtonGroup({
-  className,
-  orientation,
+  orientation = 'horizontal',
   ...props
-}: React.ComponentProps<'div'> & VariantProps<typeof buttonGroupVariants>) {
+}: React.ComponentProps<'div'> & { orientation?: ButtonGroupOrientation }) {
   return (
-    <div
+    <StyledButtonGroup
       role="group"
       data-slot="button-group"
       data-orientation={orientation}
-      className={cn(buttonGroupVariants({ orientation }), className)}
+      $orientation={orientation}
       {...props}
     />
   )
 }
 
 function ButtonGroupText({
-  className,
   asChild = false,
   ...props
-}: React.ComponentProps<'div'> & {
-  asChild?: boolean
-}) {
+}: React.ComponentProps<'div'> & { asChild?: boolean }) {
   const Comp = asChild ? Slot : 'div'
+  return <StyledButtonGroupText as={Comp} {...props} />
+}
 
+function ButtonGroupSeparator({
+  orientation = 'vertical',
+  ...props
+}: React.ComponentProps<typeof Separator>) {
   return (
-    <Comp
-      className={cn(
-        "bg-muted flex items-center gap-2 rounded-md border px-4 text-sm font-medium shadow-xs [&_svg]:pointer-events-none [&_svg:not([class*='size-'])]:size-4",
-        className,
-      )}
+    <StyledButtonGroupSeparator
+      data-slot="button-group-separator"
+      orientation={orientation}
       {...props}
     />
   )
 }
 
-function ButtonGroupSeparator({
-  className,
-  orientation = 'vertical',
-  ...props
-}: React.ComponentProps<typeof Separator>) {
-  return (
-    <Separator
-      data-slot="button-group-separator"
-      orientation={orientation}
-      className={cn(
-        'bg-input relative !m-0 self-stretch data-[orientation=vertical]:h-auto',
-        className,
-      )}
-      {...props}
-    />
-  )
+function buttonGroupVariants({ orientation }: { orientation?: ButtonGroupOrientation } = {}) {
+  return `button-group-${orientation ?? 'horizontal'}`
 }
 
 export {

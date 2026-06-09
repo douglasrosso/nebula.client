@@ -2,46 +2,107 @@
 
 import * as React from 'react'
 import * as TogglePrimitive from '@radix-ui/react-toggle'
-import { cva, type VariantProps } from 'class-variance-authority'
+import styled, { css } from 'styled-components'
 
-import { cn } from '@/lib/utils'
+type ToggleVariant = 'default' | 'outline'
+type ToggleSize = 'default' | 'sm' | 'lg'
 
-const toggleVariants = cva(
-  "inline-flex items-center justify-center gap-2 rounded-md text-sm font-medium hover:bg-muted hover:text-muted-foreground disabled:pointer-events-none disabled:opacity-50 data-[state=on]:bg-accent data-[state=on]:text-accent-foreground [&_svg]:pointer-events-none [&_svg:not([class*='size-'])]:size-4 [&_svg]:shrink-0 focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] outline-none transition-[color,box-shadow] aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive whitespace-nowrap",
-  {
-    variants: {
-      variant: {
-        default: 'bg-transparent',
-        outline:
-          'border border-input bg-transparent shadow-xs hover:bg-accent hover:text-accent-foreground',
-      },
-      size: {
-        default: 'h-9 px-2 min-w-9',
-        sm: 'h-8 px-1.5 min-w-8',
-        lg: 'h-10 px-2.5 min-w-10',
-      },
-    },
-    defaultVariants: {
-      variant: 'default',
-      size: 'default',
-    },
-  },
-)
+interface ToggleProps extends React.ComponentProps<typeof TogglePrimitive.Root> {
+  variant?: ToggleVariant
+  size?: ToggleSize
+}
+
+const variantStyles: Record<ToggleVariant, ReturnType<typeof css>> = {
+  default: css`background-color: transparent;`,
+  outline: css`
+    border: 1px solid var(--input);
+    background-color: transparent;
+    box-shadow: 0 1px 2px 0 oklch(0 0 0 / 0.05);
+    &:hover { background-color: var(--accent); color: var(--accent-foreground); }
+  `,
+}
+
+const sizeStyles: Record<ToggleSize, ReturnType<typeof css>> = {
+  default: css`height: 2.25rem; padding: 0 0.5rem; min-width: 2.25rem;`,
+  sm: css`height: 2rem; padding: 0 0.375rem; min-width: 2rem;`,
+  lg: css`height: 2.5rem; padding: 0 0.625rem; min-width: 2.5rem;`,
+}
+
+const StyledToggle = styled(TogglePrimitive.Root)<{ $variant?: ToggleVariant; $size?: ToggleSize }>`
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  border-radius: var(--radius-md);
+  font-size: 0.875rem;
+  line-height: 1.25rem;
+  font-weight: 500;
+  white-space: nowrap;
+  transition: color 150ms, box-shadow 150ms;
+  outline: none;
+  cursor: pointer;
+  border: none;
+
+  &:hover {
+    background-color: var(--muted);
+    color: var(--muted-foreground);
+  }
+
+  &[data-state='on'] {
+    background-color: var(--accent);
+    color: var(--accent-foreground);
+  }
+
+  & svg {
+    pointer-events: none;
+    flex-shrink: 0;
+  }
+
+  & svg:not([class*='size-']) {
+    width: 1rem;
+    height: 1rem;
+  }
+
+  &:focus-visible {
+    border-color: var(--ring);
+    box-shadow: 0 0 0 3px color-mix(in oklch, var(--ring) 50%, transparent);
+  }
+
+  &:disabled {
+    pointer-events: none;
+    opacity: 0.5;
+  }
+
+  &[aria-invalid='true'] {
+    border-color: var(--destructive);
+    box-shadow: 0 0 0 3px color-mix(in oklch, var(--destructive) 20%, transparent);
+  }
+
+  ${({ $variant = 'default' }) => variantStyles[$variant]}
+  ${({ $size = 'default' }) => sizeStyles[$size]}
+`
 
 function Toggle({
   className,
-  variant,
-  size,
+  variant = 'default',
+  size = 'default',
   ...props
-}: React.ComponentProps<typeof TogglePrimitive.Root> &
-  VariantProps<typeof toggleVariants>) {
+}: ToggleProps) {
   return (
-    <TogglePrimitive.Root
+    <StyledToggle
       data-slot="toggle"
-      className={cn(toggleVariants({ variant, size, className }))}
+      $variant={variant}
+      $size={size}
+      className={className}
       {...props}
     />
   )
 }
 
+// toggleVariants kept for toggle-group compatibility
+function toggleVariants({ variant = 'default', size = 'default' }: { variant?: ToggleVariant; size?: ToggleSize } = {}) {
+  return `toggle-variant-${variant} toggle-size-${size}`
+}
+
 export { Toggle, toggleVariants }
+export type { ToggleVariant, ToggleSize }

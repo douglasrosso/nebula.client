@@ -2,6 +2,7 @@
 
 import { useState, useEffect, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
+import styled from "styled-components";
 import { useStore } from "@/lib/store";
 import { useGames } from "@/lib/hooks/useGames";
 import { GameCard } from "@/components/game-card";
@@ -23,6 +24,300 @@ const SORT_OPTIONS = [
   { value: "rating", label: "Melhor avaliação" },
 ] as const;
 
+/* ─── Styled ─── */
+const MainPage = styled.main`
+  min-height: 100vh;
+  padding-top: 5rem;
+  padding-bottom: 4rem;
+`;
+
+const Container = styled.div`
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 0 1rem;
+  @media (min-width: 1024px) { padding: 0 1.5rem; }
+`;
+
+const PageHeader = styled.div`
+  margin-bottom: 2rem;
+`;
+
+const PageTitle = styled.h1`
+  font-size: 1.75rem;
+  font-weight: 700;
+  letter-spacing: -0.025em;
+  color: var(--foreground);
+  margin: 0 0 0.25rem;
+`;
+
+const PageSubtitle = styled.p`
+  font-size: 0.9375rem;
+  color: var(--muted-foreground);
+  margin: 0;
+`;
+
+const SearchRow = styled.div`
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 1.5rem;
+`;
+
+const SearchForm = styled.form`
+  flex: 1;
+  position: relative;
+`;
+
+const SearchIconWrapper = styled.span`
+  position: absolute;
+  left: 0.875rem;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--muted-foreground);
+  display: flex;
+  align-items: center;
+  pointer-events: none;
+`;
+
+const SearchInput = styled.input`
+  width: 100%;
+  height: 2.75rem;
+  padding-left: 2.5rem;
+  padding-right: 1rem;
+  border-radius: 0.75rem;
+  font-size: 0.9375rem;
+  color: var(--foreground);
+  background-color: var(--surface-raised);
+  border: 1px solid var(--border);
+  outline: none;
+  transition: border-color 150ms;
+  &::placeholder { color: var(--text-tertiary); }
+  &:focus { border-color: var(--ring); }
+`;
+
+const FilterButton = styled.button`
+  height: 2.75rem;
+  padding: 0 1rem;
+  border-radius: 0.75rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  position: relative;
+  background-color: var(--surface-raised);
+  border: 1px solid var(--border);
+  color: var(--muted-foreground);
+  cursor: pointer;
+  transition: color 150ms;
+  &:hover { color: var(--foreground); }
+  @media (min-width: 1024px) { display: none; }
+`;
+
+const FilterDot = styled.span`
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 9999px;
+  background-color: var(--primary);
+  position: absolute;
+  top: -0.125rem;
+  right: -0.125rem;
+`;
+
+const ActiveFilters = styled.div`
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-bottom: 1.5rem;
+`;
+
+const FilterTag = styled.button`
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  padding: 0.25rem 0.75rem;
+  border-radius: 9999px;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  background-color: color-mix(in oklch, var(--primary) 12%, transparent);
+  color: var(--primary);
+  border: none;
+  cursor: pointer;
+`;
+
+const ContentRow = styled.div`
+  display: flex;
+  gap: 1.5rem;
+`;
+
+const Sidebar = styled.aside`
+  display: none;
+  width: 14rem;
+  flex-shrink: 0;
+  @media (min-width: 1024px) { display: block; }
+`;
+
+const SidebarInner = styled.div`
+  border-radius: 1rem;
+  padding: 1.25rem;
+  position: sticky;
+  top: 5rem;
+  background-color: var(--surface-base);
+`;
+
+const SidebarTitle = styled.p`
+  font-size: 1.0625rem;
+  font-weight: 700;
+  color: var(--foreground);
+  margin: 0 0 1.25rem;
+`;
+
+const Main = styled.div`
+  flex: 1;
+`;
+
+const ResultCount = styled.div`
+  margin-bottom: 1rem;
+  font-size: 0.8125rem;
+  color: var(--muted-foreground);
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+`;
+
+const EmptyState = styled.div`
+  border-radius: 1rem;
+  padding: 3rem;
+  text-align: center;
+  background-color: var(--surface-raised);
+`;
+
+const EmptyText = styled.p`
+  font-size: 0.9375rem;
+  color: var(--muted-foreground);
+  margin: 0 0 1rem;
+`;
+
+const ClearButton = styled.button`
+  padding: 0.625rem 1.25rem;
+  border-radius: 0.75rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  background-color: var(--surface-inset);
+  color: var(--foreground);
+  border: none;
+  cursor: pointer;
+  transition: opacity 150ms;
+  &:hover { opacity: 0.8; }
+`;
+
+const GamesGrid = styled.div`
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0.75rem;
+  @media (min-width: 640px) { grid-template-columns: repeat(2, 1fr); }
+  @media (min-width: 1280px) { grid-template-columns: repeat(3, 1fr); }
+`;
+
+/* ─── Filters Panel ─── */
+const FiltersSection = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 1.75rem;
+`;
+
+const FilterGroupLabel = styled.p`
+  font-size: 0.6875rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin: 0 0 0.75rem;
+  color: var(--muted-foreground);
+`;
+
+const SortList = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+`;
+
+const SortOption = styled.button<{ $active?: boolean }>`
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.5rem 0.75rem;
+  border-radius: 0.5rem;
+  font-size: 0.875rem;
+  transition: all 150ms;
+  border: none;
+  cursor: pointer;
+  background-color: ${({ $active }) => $active ? "color-mix(in oklch, var(--primary) 12%, transparent)" : "transparent"};
+  color: ${({ $active }) => $active ? "var(--primary)" : "var(--muted-foreground)"};
+  &:hover {
+    color: ${({ $active }) => $active ? "var(--primary)" : "var(--foreground)"};
+    background-color: ${({ $active }) => $active ? "color-mix(in oklch, var(--primary) 12%, transparent)" : "color-mix(in oklch, var(--foreground) 5%, transparent)"};
+  }
+`;
+
+const SortDot = styled.span`
+  width: 0.375rem;
+  height: 0.375rem;
+  border-radius: 9999px;
+  background-color: var(--primary);
+`;
+
+const PriceRange = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 0.8125rem;
+  color: var(--muted-foreground);
+  margin-top: 0.75rem;
+`;
+
+const GenresList = styled.div`
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+`;
+
+const GenreChip = styled.button<{ $active?: boolean }>`
+  padding: 0.375rem 0.75rem;
+  border-radius: 9999px;
+  font-size: 0.75rem;
+  font-weight: 500;
+  transition: all 150ms;
+  border: none;
+  cursor: pointer;
+  background-color: ${({ $active }) => $active ? "var(--primary)" : "var(--surface-inset)"};
+  color: ${({ $active }) => $active ? "var(--primary-foreground)" : "var(--foreground)"};
+  &:hover {
+    background-color: ${({ $active }) => $active ? "var(--primary)" : "color-mix(in oklch, var(--primary) 12%, transparent)"};
+    color: ${({ $active }) => $active ? "var(--primary-foreground)" : "var(--primary)"};
+  }
+`;
+
+const ClearFiltersButton = styled.button`
+  width: 100%;
+  padding: 0.625rem;
+  border-radius: 0.75rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  background-color: var(--surface-inset);
+  color: var(--destructive);
+  border: none;
+  cursor: pointer;
+  transition: opacity 150ms;
+  &:hover { opacity: 0.8; }
+`;
+
+const LoadingSpinner = styled.span`
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+`;
+
+/* ─── Store Content ─── */
 function StoreContent() {
   const searchParams = useSearchParams();
   const { searchQuery, setSearchQuery, selectedGenres, setSelectedGenres, priceRange, setPriceRange, sortBy, setSortBy, getFilteredGames } = useStore();
@@ -46,148 +341,147 @@ function StoreContent() {
   const hasActiveFilters = searchQuery !== "" || selectedGenres.length > 0 || priceRange[0] > 0 || priceRange[1] < 500;
 
   const FiltersContent = () => (
-    <div className="space-y-7">
+    <FiltersSection>
       <div>
-        <p className="text-[11px] font-semibold uppercase tracking-wider mb-3 text-muted-foreground">Ordenar</p>
-        <div className="space-y-0.5">
+        <FilterGroupLabel>Ordenar</FilterGroupLabel>
+        <SortList>
           {SORT_OPTIONS.map((opt) => (
-            <button
+            <SortOption
               key={opt.value}
               onClick={() => setSortBy(opt.value as typeof sortBy)}
-              className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-[14px] transition-colors ${sortBy === opt.value ? "bg-primary/12 text-primary" : "text-muted-foreground hover:text-foreground hover:bg-foreground/5"}`}
+              $active={sortBy === opt.value}
             >
               {opt.label}
-              {sortBy === opt.value && <span className="w-1.5 h-1.5 rounded-full bg-primary" />}
-            </button>
+              {sortBy === opt.value && <SortDot />}
+            </SortOption>
           ))}
-        </div>
+        </SortList>
       </div>
 
       <div>
-        <p className="text-[11px] font-semibold uppercase tracking-wider mb-3 text-muted-foreground">Faixa de Preço</p>
-        <Slider value={priceRange} onValueChange={(v) => setPriceRange(v as [number, number])} max={500} step={10} className="mb-3" />
-        <div className="flex items-center justify-between text-[13px] text-muted-foreground">
+        <FilterGroupLabel>Faixa de Preço</FilterGroupLabel>
+        <Slider value={priceRange} onValueChange={(v) => setPriceRange(v as [number, number])} max={500} step={10} style={{ marginBottom: "0.75rem" }} />
+        <PriceRange>
           <span>R$ {priceRange[0]}</span><span>R$ {priceRange[1]}</span>
-        </div>
+        </PriceRange>
       </div>
 
       <div>
-        <p className="text-[11px] font-semibold uppercase tracking-wider mb-3 text-muted-foreground">Gêneros</p>
-        <div className="flex flex-wrap gap-2">
+        <FilterGroupLabel>Gêneros</FilterGroupLabel>
+        <GenresList>
           {apiGenres.map((genre) => (
-            <button
+            <GenreChip
               key={genre}
               onClick={() => toggleGenre(genre)}
-              className={`px-3 py-1.5 rounded-full text-[12px] font-medium transition-colors ${selectedGenres.includes(genre) ? "bg-primary text-primary-foreground" : "bg-surface-inset text-foreground hover:bg-primary/12 hover:text-primary"}`}
+              $active={selectedGenres.includes(genre)}
             >
               {genre}
-            </button>
+            </GenreChip>
           ))}
-        </div>
+        </GenresList>
       </div>
 
       {hasActiveFilters && (
-        <button
-          onClick={clearFilters}
-          className="w-full py-2.5 rounded-xl text-[14px] font-medium bg-surface-inset text-destructive hover:opacity-80 transition-opacity"
-        >
-          Limpar filtros
-        </button>
+        <ClearFiltersButton onClick={clearFilters}>Limpar filtros</ClearFiltersButton>
       )}
-    </div>
+    </FiltersSection>
   );
 
   return (
-    <main id="main-content" className="min-h-screen pt-20 pb-16">
-      <div className="container mx-auto px-4 lg:px-6">
-        <div className="mb-8">
-          <h1 className="text-[28px] font-bold tracking-tight text-foreground mb-1">Loja</h1>
-          <p className="text-[15px] text-muted-foreground">Descubra sua próxima aventura</p>
-        </div>
+    <MainPage id="main-content">
+      <Container>
+        <PageHeader>
+          <PageTitle>Loja</PageTitle>
+          <PageSubtitle>Descubra sua próxima aventura</PageSubtitle>
+        </PageHeader>
 
-        <div className="flex gap-2 mb-6">
-          <form onSubmit={handleSearch} className="flex-1 relative">
-            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-            <input
+        <SearchRow>
+          <SearchForm onSubmit={handleSearch}>
+            <SearchIconWrapper>
+              <Search style={{ width: "1rem", height: "1rem" }} />
+            </SearchIconWrapper>
+            <SearchInput
               type="search" placeholder="Pesquisar jogos..."
               value={localSearch} onChange={(e) => setLocalSearch(e.target.value)}
-              className="w-full h-11 pl-10 pr-4 rounded-xl text-[15px] text-foreground bg-surface-raised border border-border outline-none transition-colors placeholder:text-text-tertiary"
               aria-label="Pesquisar jogos"
             />
-          </form>
+          </SearchForm>
 
           <Sheet>
-            <SheetTrigger asChild className="lg:hidden">
-              <button
-                className="h-11 px-4 rounded-xl text-[14px] font-medium flex items-center gap-2 relative bg-surface-raised border border-border text-muted-foreground hover:text-foreground transition-colors"
-                aria-label="Abrir filtros"
-              >
-                <SlidersHorizontal className="w-4 h-4" />
+            <SheetTrigger asChild>
+              <FilterButton aria-label="Abrir filtros">
+                <SlidersHorizontal style={{ width: "1rem", height: "1rem" }} />
                 Filtros
-                {hasActiveFilters && <span className="w-2 h-2 rounded-full bg-primary absolute -top-0.5 -right-0.5" />}
-              </button>
+                {hasActiveFilters && <FilterDot />}
+              </FilterButton>
             </SheetTrigger>
-            <SheetContent side="right" className="w-80 bg-background border-border p-6">
+            <SheetContent side="right" style={{ width: "20rem", backgroundColor: "var(--background)", padding: "1.5rem" }}>
               <SheetHeader>
-                <SheetTitle className="text-[17px] font-bold text-foreground">Filtros</SheetTitle>
+                <SheetTitle style={{ fontSize: "1.0625rem", fontWeight: 700, color: "var(--foreground)" }}>Filtros</SheetTitle>
               </SheetHeader>
-              <div className="mt-6"><FiltersContent /></div>
+              <div style={{ marginTop: "1.5rem" }}><FiltersContent /></div>
             </SheetContent>
           </Sheet>
-        </div>
+        </SearchRow>
 
         {hasActiveFilters && (
-          <div className="flex flex-wrap gap-2 mb-6">
+          <ActiveFilters>
             {searchQuery && (
-              <button onClick={() => { setSearchQuery(""); setLocalSearch(""); }} className="flex items-center gap-1.5 px-3 py-1 rounded-full text-[13px] font-medium bg-primary/12 text-primary">
-                "{searchQuery}" <X className="w-3 h-3" />
-              </button>
+              <FilterTag onClick={() => { setSearchQuery(""); setLocalSearch(""); }}>
+                "{searchQuery}" <X style={{ width: "0.75rem", height: "0.75rem" }} />
+              </FilterTag>
             )}
             {selectedGenres.map((genre) => (
-              <button key={genre} onClick={() => toggleGenre(genre)} className="flex items-center gap-1.5 px-3 py-1 rounded-full text-[13px] font-medium bg-primary/12 text-primary">
-                {genre} <X className="w-3 h-3" />
-              </button>
+              <FilterTag key={genre} onClick={() => toggleGenre(genre)}>
+                {genre} <X style={{ width: "0.75rem", height: "0.75rem" }} />
+              </FilterTag>
             ))}
-          </div>
+          </ActiveFilters>
         )}
 
-        <div className="flex gap-6">
-          <aside className="hidden lg:block w-56 flex-shrink-0">
-            <div className="rounded-2xl p-5 sticky top-20 bg-surface-base">
-              <p className="text-[17px] font-bold text-foreground mb-5">Filtros</p>
+        <ContentRow>
+          <Sidebar>
+            <SidebarInner>
+              <SidebarTitle>Filtros</SidebarTitle>
               <FiltersContent />
-            </div>
-          </aside>
+            </SidebarInner>
+          </Sidebar>
 
-          <div className="flex-1">
-            <div className="mb-4 text-[13px] text-muted-foreground">
+          <Main>
+            <ResultCount>
               {loading
-                ? <span className="flex items-center gap-2"><Loader2 className="w-3.5 h-3.5 animate-spin" /> Carregando...</span>
+                ? <LoadingSpinner><Loader2 style={{ width: "0.875rem", height: "0.875rem", animation: "spin 1s linear infinite" }} /> Carregando...</LoadingSpinner>
                 : `${filteredGames.length} jogo${filteredGames.length !== 1 ? "s" : ""}`
               }
-            </div>
+            </ResultCount>
             {!loading && filteredGames.length === 0 ? (
-              <div className="rounded-2xl p-12 text-center bg-surface-raised">
-                <p className="text-[15px] text-muted-foreground mb-4">Nenhum jogo encontrado com os filtros selecionados.</p>
-                <button onClick={clearFilters} className="px-5 py-2 rounded-xl text-[14px] font-semibold bg-surface-inset text-foreground hover:opacity-80 transition-opacity">
-                  Limpar filtros
-                </button>
-              </div>
+              <EmptyState>
+                <EmptyText>Nenhum jogo encontrado com os filtros selecionados.</EmptyText>
+                <ClearButton onClick={clearFilters}>Limpar filtros</ClearButton>
+              </EmptyState>
             ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3">
+              <GamesGrid>
                 {filteredGames.map((game) => <GameCard key={game.id} game={game} />)}
-              </div>
+              </GamesGrid>
             )}
-          </div>
-        </div>
-      </div>
-    </main>
+          </Main>
+        </ContentRow>
+      </Container>
+    </MainPage>
   );
 }
 
+const FallbackMain = styled.main`
+  min-height: 100vh;
+  padding-top: 5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+`;
+
 export default function StorePage() {
   return (
-    <Suspense fallback={<main className="min-h-screen pt-20 flex items-center justify-center"><Loader2 className="w-8 h-8 animate-spin text-primary" /></main>}>
+    <Suspense fallback={<FallbackMain><Loader2 style={{ width: "2rem", height: "2rem", animation: "spin 1s linear infinite", color: "var(--primary)" }} /></FallbackMain>}>
       <StoreContent />
     </Suspense>
   );

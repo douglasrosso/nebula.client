@@ -1,97 +1,120 @@
-import { cva, type VariantProps } from 'class-variance-authority'
+import styled, { css } from 'styled-components'
 
-import { cn } from '@/lib/utils'
+const StyledEmpty = styled.div`
+  display: flex;
+  min-width: 0;
+  flex: 1;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1.5rem;
+  border-radius: 0.5rem;
+  border: 1px dashed var(--border);
+  padding: 1.5rem;
+  text-align: center;
+  text-wrap: balance;
 
-function Empty({ className, ...props }: React.ComponentProps<'div'>) {
-  return (
-    <div
-      data-slot="empty"
-      className={cn(
-        'flex min-w-0 flex-1 flex-col items-center justify-center gap-6 rounded-lg border-dashed p-6 text-center text-balance md:p-12',
-        className,
-      )}
-      {...props}
-    />
-  )
+  @media (min-width: 768px) {
+    padding: 3rem;
+  }
+`
+
+const StyledEmptyHeader = styled.div`
+  display: flex;
+  max-width: 24rem;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  text-align: center;
+`
+
+const mediaVariantStyles: Record<string, ReturnType<typeof css>> = {
+  default: css`background-color: transparent;`,
+  icon: css`
+    background-color: var(--muted);
+    color: var(--foreground);
+    width: 2.5rem;
+    height: 2.5rem;
+    flex-shrink: 0;
+    align-items: center;
+    justify-content: center;
+    border-radius: 0.5rem;
+    & svg { width: 1.5rem; height: 1.5rem; }
+  `,
 }
 
-function EmptyHeader({ className, ...props }: React.ComponentProps<'div'>) {
-  return (
-    <div
-      data-slot="empty-header"
-      className={cn(
-        'flex max-w-sm flex-col items-center gap-2 text-center',
-        className,
-      )}
-      {...props}
-    />
-  )
+const StyledEmptyMedia = styled.div<{ $variant?: string }>`
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 0.5rem;
+  pointer-events: none;
+  & svg { flex-shrink: 0; }
+  ${({ $variant = 'default' }) => mediaVariantStyles[$variant] ?? mediaVariantStyles.default}
+`
+
+const StyledEmptyTitle = styled.div`
+  font-size: 1.125rem;
+  font-medium: 500;
+  font-weight: 500;
+  letter-spacing: -0.025em;
+`
+
+const StyledEmptyDescription = styled.div`
+  color: var(--muted-foreground);
+  font-size: 0.875rem;
+  line-height: 1.625;
+  font-weight: normal;
+
+  & > a { text-decoration: underline; text-underline-offset: 4px; }
+  & > a:hover { color: var(--primary); }
+`
+
+const StyledEmptyContent = styled.div`
+  display: flex;
+  width: 100%;
+  max-width: 24rem;
+  min-width: 0;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+  font-size: 0.875rem;
+  text-wrap: balance;
+`
+
+function Empty({ ...props }: React.ComponentProps<'div'>) {
+  return <StyledEmpty data-slot="empty" {...props} />
 }
 
-const emptyMediaVariants = cva(
-  'flex shrink-0 items-center justify-center mb-2 [&_svg]:pointer-events-none [&_svg]:shrink-0',
-  {
-    variants: {
-      variant: {
-        default: 'bg-transparent',
-        icon: "bg-muted text-foreground flex size-10 shrink-0 items-center justify-center rounded-lg [&_svg:not([class*='size-'])]:size-6",
-      },
-    },
-    defaultVariants: {
-      variant: 'default',
-    },
-  },
-)
+function EmptyHeader({ ...props }: React.ComponentProps<'div'>) {
+  return <StyledEmptyHeader data-slot="empty-header" {...props} />
+}
 
 function EmptyMedia({
-  className,
   variant = 'default',
   ...props
-}: React.ComponentProps<'div'> & VariantProps<typeof emptyMediaVariants>) {
+}: React.ComponentProps<'div'> & { variant?: 'default' | 'icon' }) {
   return (
-    <div
+    <StyledEmptyMedia
       data-slot="empty-icon"
       data-variant={variant}
-      className={cn(emptyMediaVariants({ variant, className }))}
+      $variant={variant}
       {...props}
     />
   )
 }
 
-function EmptyTitle({ className, ...props }: React.ComponentProps<'div'>) {
-  return (
-    <div
-      data-slot="empty-title"
-      className={cn('text-lg font-medium tracking-tight', className)}
-      {...props}
-    />
-  )
+function EmptyTitle({ ...props }: React.ComponentProps<'div'>) {
+  return <StyledEmptyTitle data-slot="empty-title" {...props} />
 }
 
-function EmptyDescription({ className, ...props }: React.ComponentProps<'p'>) {
-  return (
-    <div
-      data-slot="empty-description"
-      className={cn(
-        'text-muted-foreground [&>a:hover]:text-primary text-sm/relaxed [&>a]:underline [&>a]:underline-offset-4',
-        className,
-      )}
-      {...props}
-    />
-  )
+function EmptyDescription({ ...props }: React.ComponentProps<'p'>) {
+  return <StyledEmptyDescription as="div" data-slot="empty-description" {...props} />
 }
 
-function EmptyContent({ className, ...props }: React.ComponentProps<'div'>) {
-  return (
-    <div
-      data-slot="empty-content"
-      className={cn(
-        'flex w-full max-w-sm min-w-0 flex-col items-center gap-4 text-sm text-balance',
-        className,
-      )}
-      {...props}
-    />
-  )
+function EmptyContent({ ...props }: React.ComponentProps<'div'>) {
+  return <StyledEmptyContent data-slot="empty-content" {...props} />
 }
 
 export {

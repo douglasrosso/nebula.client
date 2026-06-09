@@ -3,9 +3,157 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import styled from "styled-components";
 import { usersApi } from "@/lib/api";
 import { useStore } from "@/lib/store";
 import { Loader2 } from "lucide-react";
+
+/* ─── Styled (same pattern as login) ─── */
+const Page = styled.main`
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 3rem 1.5rem;
+  background-color: var(--background);
+`;
+
+const Wrapper = styled.div`
+  width: 100%;
+  max-width: 340px;
+  animation: fadeIn 0.25s cubic-bezier(0.25, 0.46, 0.45, 0.94) both;
+`;
+
+const LogoSection = styled.div`
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-bottom: 2.5rem;
+`;
+
+const LogoBox = styled.div`
+  width: 5rem;
+  height: 5rem;
+  border-radius: 1.375rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 1.5rem;
+  box-shadow: 0 10px 15px -3px oklch(0 0 0 / 0.1), 0 4px 6px -4px oklch(0 0 0 / 0.1);
+  background: linear-gradient(145deg, oklch(0.55 0.26 258), oklch(0.45 0.24 280));
+`;
+
+const LogoLetter = styled.span`
+  color: white;
+  font-weight: 900;
+  font-size: 1.875rem;
+  letter-spacing: -0.025em;
+  user-select: none;
+`;
+
+const Title = styled.h1`
+  font-size: 1.75rem;
+  font-weight: 700;
+  letter-spacing: -0.025em;
+  color: var(--foreground);
+  margin: 0;
+`;
+
+const Subtitle = styled.p`
+  font-size: 0.9375rem;
+  margin: 0.25rem 0 0;
+  color: var(--muted-foreground);
+`;
+
+const Form = styled.form`
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+`;
+
+const FieldGroup = styled.div`
+  border-radius: 0.875rem;
+  overflow: hidden;
+  background-color: var(--surface-raised);
+  border: 1px solid var(--border);
+`;
+
+const FieldRow = styled.div`
+  padding: 0.875rem 1rem;
+`;
+
+const FieldDivider = styled.div`
+  height: 1px;
+  background-color: var(--border);
+`;
+
+const FieldLabel = styled.label`
+  display: block;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 0.375rem;
+  color: var(--muted-foreground);
+`;
+
+const FieldInput = styled.input`
+  width: 100%;
+  background: transparent;
+  font-size: 1.0625rem;
+  color: var(--foreground);
+  border: none;
+  outline: none;
+  &::placeholder { color: var(--text-tertiary); }
+`;
+
+const OptionalNote = styled.span`
+  font-size: inherit;
+  font-weight: normal;
+  text-transform: none;
+  color: var(--text-tertiary);
+`;
+
+const ErrorMessage = styled.p`
+  font-size: 0.8125rem;
+  padding: 0.625rem 1rem;
+  border-radius: 0.625rem;
+  color: var(--destructive);
+  background-color: color-mix(in oklch, var(--destructive) 10%, transparent);
+  margin: 0;
+`;
+
+const SubmitButton = styled.button`
+  width: 100%;
+  height: 3.125rem;
+  border-radius: 0.875rem;
+  font-size: 1.0625rem;
+  font-weight: 600;
+  color: var(--primary-foreground);
+  background-color: var(--primary);
+  border: none;
+  cursor: pointer;
+  transition: opacity 150ms;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  &:disabled { opacity: 0.6; cursor: not-allowed; }
+`;
+
+const FooterText = styled.p`
+  margin-top: 1.5rem;
+  font-size: 0.9375rem;
+  text-align: center;
+  color: var(--muted-foreground);
+`;
+
+const FooterLink = styled(Link)`
+  font-weight: 600;
+  color: var(--primary);
+  text-decoration: none;
+  transition: opacity 150ms;
+  &:hover { opacity: 0.7; }
+`;
 
 export default function CadastroPage() {
   const router = useRouter();
@@ -34,79 +182,66 @@ export default function CadastroPage() {
     }
   };
 
-  const inputClass = "w-full bg-transparent text-[17px] text-foreground placeholder:text-text-tertiary outline-none";
-  const labelClass = "block text-[11px] font-semibold uppercase tracking-wider mb-1.5 text-muted-foreground";
-
   return (
-    <main className="min-h-screen flex items-center justify-center px-6 py-12 bg-background">
-      <div className="w-full max-w-[340px] animate-fade-in">
-        <div className="flex flex-col items-center mb-10">
-          <div
-            className="w-20 h-20 rounded-[22px] flex items-center justify-center mb-6 shadow-lg"
-            style={{ background: "linear-gradient(145deg, oklch(0.55 0.26 258), oklch(0.45 0.24 280))" }}
-          >
-            <span className="text-white font-black text-3xl tracking-tight select-none">N</span>
-          </div>
-          <h1 className="text-[28px] font-bold tracking-tight text-foreground">Criar conta</h1>
-          <p className="text-[15px] mt-1 text-muted-foreground">Junte-se à Nebula</p>
-        </div>
+    <Page>
+      <Wrapper>
+        <LogoSection>
+          <LogoBox>
+            <LogoLetter>N</LogoLetter>
+          </LogoBox>
+          <Title>Criar conta</Title>
+          <Subtitle>Junte-se à Nebula</Subtitle>
+        </LogoSection>
 
-        <form onSubmit={handleSubmit} className="space-y-3">
+        <Form onSubmit={handleSubmit}>
           {/* Name + Username */}
-          <div className="rounded-[14px] overflow-hidden bg-surface-raised border border-border">
-            <div className="px-4 py-3.5">
-              <label htmlFor="name" className={labelClass}>Nome completo</label>
-              <input id="name" name="name" type="text" placeholder="Seu nome" value={form.name} onChange={handleChange} required className={inputClass} />
-            </div>
-            <div className="h-px bg-border" />
-            <div className="px-4 py-3.5">
-              <label htmlFor="username" className={labelClass}>
-                Usuário <span className="normal-case font-normal text-text-tertiary">(opcional)</span>
-              </label>
-              <input id="username" name="username" type="text" placeholder="@usuario" value={form.username} onChange={handleChange} className={inputClass} />
-            </div>
-          </div>
+          <FieldGroup>
+            <FieldRow>
+              <FieldLabel htmlFor="name">Nome completo</FieldLabel>
+              <FieldInput id="name" name="name" type="text" placeholder="Seu nome" value={form.name} onChange={handleChange} required />
+            </FieldRow>
+            <FieldDivider />
+            <FieldRow>
+              <FieldLabel htmlFor="username">
+                Usuário <OptionalNote>(opcional)</OptionalNote>
+              </FieldLabel>
+              <FieldInput id="username" name="username" type="text" placeholder="@usuario" value={form.username} onChange={handleChange} />
+            </FieldRow>
+          </FieldGroup>
 
           {/* Email */}
-          <div className="rounded-[14px] overflow-hidden bg-surface-raised border border-border">
-            <div className="px-4 py-3.5">
-              <label htmlFor="email" className={labelClass}>E-mail</label>
-              <input id="email" name="email" type="email" placeholder="seu@email.com" value={form.email} onChange={handleChange} required className={inputClass} />
-            </div>
-          </div>
+          <FieldGroup>
+            <FieldRow>
+              <FieldLabel htmlFor="email">E-mail</FieldLabel>
+              <FieldInput id="email" name="email" type="email" placeholder="seu@email.com" value={form.email} onChange={handleChange} required />
+            </FieldRow>
+          </FieldGroup>
 
           {/* Passwords */}
-          <div className="rounded-[14px] overflow-hidden bg-surface-raised border border-border">
-            <div className="px-4 py-3.5">
-              <label htmlFor="password" className={labelClass}>Senha</label>
-              <input id="password" name="password" type="password" placeholder="••••••••" value={form.password} onChange={handleChange} required className={inputClass} />
-            </div>
-            <div className="h-px bg-border" />
-            <div className="px-4 py-3.5">
-              <label htmlFor="confirmPassword" className={labelClass}>Confirmar senha</label>
-              <input id="confirmPassword" name="confirmPassword" type="password" placeholder="••••••••" value={form.confirmPassword} onChange={handleChange} required className={inputClass} />
-            </div>
-          </div>
+          <FieldGroup>
+            <FieldRow>
+              <FieldLabel htmlFor="password">Senha</FieldLabel>
+              <FieldInput id="password" name="password" type="password" placeholder="••••••••" value={form.password} onChange={handleChange} required />
+            </FieldRow>
+            <FieldDivider />
+            <FieldRow>
+              <FieldLabel htmlFor="confirmPassword">Confirmar senha</FieldLabel>
+              <FieldInput id="confirmPassword" name="confirmPassword" type="password" placeholder="••••••••" value={form.confirmPassword} onChange={handleChange} required />
+            </FieldRow>
+          </FieldGroup>
 
-          {error && (
-            <p className="text-[13px] px-4 py-2.5 rounded-[10px] text-destructive bg-destructive/10">{error}</p>
-          )}
+          {error && <ErrorMessage>{error}</ErrorMessage>}
 
-          <button
-            type="submit" disabled={loading}
-            className="w-full h-[50px] rounded-[14px] text-[17px] font-semibold text-primary-foreground bg-primary transition-opacity duration-150 disabled:opacity-60 flex items-center justify-center"
-          >
-            {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : "Criar conta"}
-          </button>
-        </form>
+          <SubmitButton type="submit" disabled={loading}>
+            {loading ? <Loader2 style={{ width: "1.25rem", height: "1.25rem", animation: "spin 1s linear infinite" }} /> : "Criar conta"}
+          </SubmitButton>
+        </Form>
 
-        <p className="mt-6 text-[15px] text-center text-muted-foreground">
+        <FooterText>
           Já tem uma conta?{" "}
-          <Link href="/login" className="font-semibold text-primary hover:opacity-70 transition-opacity">
-            Entrar
-          </Link>
-        </p>
-      </div>
-    </main>
+          <FooterLink href="/login">Entrar</FooterLink>
+        </FooterText>
+      </Wrapper>
+    </Page>
   );
 }

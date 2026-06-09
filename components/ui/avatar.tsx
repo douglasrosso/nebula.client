@@ -2,20 +2,42 @@
 
 import * as React from 'react'
 import * as AvatarPrimitive from '@radix-ui/react-avatar'
+import styled from 'styled-components'
 
-import { cn } from '@/lib/utils'
+const StyledAvatarRoot = styled(AvatarPrimitive.Root)`
+  position: relative;
+  display: flex;
+  width: 2rem;
+  height: 2rem;
+  flex-shrink: 0;
+  overflow: hidden;
+  border-radius: 9999px;
+`
+
+const StyledAvatarImage = styled(AvatarPrimitive.Image)`
+  aspect-ratio: 1 / 1;
+  width: 100%;
+  height: 100%;
+`
+
+const StyledAvatarFallback = styled(AvatarPrimitive.Fallback)`
+  background-color: var(--muted);
+  display: flex;
+  width: 100%;
+  height: 100%;
+  align-items: center;
+  justify-content: center;
+  border-radius: 9999px;
+`
 
 function Avatar({
   className,
   ...props
 }: React.ComponentProps<typeof AvatarPrimitive.Root>) {
   return (
-    <AvatarPrimitive.Root
+    <StyledAvatarRoot
       data-slot="avatar"
-      className={cn(
-        'relative flex size-8 shrink-0 overflow-hidden rounded-full',
-        className,
-      )}
+      className={className}
       {...props}
     />
   )
@@ -26,9 +48,9 @@ function AvatarImage({
   ...props
 }: React.ComponentProps<typeof AvatarPrimitive.Image>) {
   return (
-    <AvatarPrimitive.Image
+    <StyledAvatarImage
       data-slot="avatar-image"
-      className={cn('aspect-square size-full', className)}
+      className={className}
       {...props}
     />
   )
@@ -39,12 +61,9 @@ function AvatarFallback({
   ...props
 }: React.ComponentProps<typeof AvatarPrimitive.Fallback>) {
   return (
-    <AvatarPrimitive.Fallback
+    <StyledAvatarFallback
       data-slot="avatar-fallback"
-      className={cn(
-        'bg-muted flex size-full items-center justify-center rounded-full',
-        className,
-      )}
+      className={className}
       {...props}
     />
   )
