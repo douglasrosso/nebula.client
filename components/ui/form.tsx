@@ -12,8 +12,8 @@ import {
   type FieldPath,
   type FieldValues,
 } from 'react-hook-form'
+import styled from 'styled-components'
 
-import { cn } from '@/lib/utils'
 import { Label } from '@/components/ui/label'
 
 const Form = FormProvider
@@ -73,14 +73,35 @@ const FormItemContext = React.createContext<FormItemContextValue>(
   {} as FormItemContextValue,
 )
 
+const StyledFormItem = styled.div`
+  display: grid;
+  gap: 0.5rem;
+`
+
+const StyledFormDescription = styled.p`
+  color: var(--muted-foreground);
+  font-size: 0.875rem;
+  line-height: 1.25rem;
+`
+
+const StyledFormMessage = styled.p`
+  color: var(--destructive);
+  font-size: 0.875rem;
+  line-height: 1.25rem;
+`
+
+const StyledFormLabel = styled(Label)<{ $hasError?: boolean }>`
+  ${({ $hasError }) => $hasError && `color: var(--destructive);`}
+`
+
 function FormItem({ className, ...props }: React.ComponentProps<'div'>) {
   const id = React.useId()
 
   return (
     <FormItemContext.Provider value={{ id }}>
-      <div
+      <StyledFormItem
         data-slot="form-item"
-        className={cn('grid gap-2', className)}
+        className={className}
         {...props}
       />
     </FormItemContext.Provider>
@@ -94,10 +115,11 @@ function FormLabel({
   const { error, formItemId } = useFormField()
 
   return (
-    <Label
+    <StyledFormLabel
       data-slot="form-label"
       data-error={!!error}
-      className={cn('data-[error=true]:text-destructive', className)}
+      $hasError={!!error}
+      className={className}
       htmlFor={formItemId}
       {...props}
     />
@@ -126,10 +148,10 @@ function FormDescription({ className, ...props }: React.ComponentProps<'p'>) {
   const { formDescriptionId } = useFormField()
 
   return (
-    <p
+    <StyledFormDescription
       data-slot="form-description"
       id={formDescriptionId}
-      className={cn('text-muted-foreground text-sm', className)}
+      className={className}
       {...props}
     />
   )
@@ -144,14 +166,14 @@ function FormMessage({ className, ...props }: React.ComponentProps<'p'>) {
   }
 
   return (
-    <p
+    <StyledFormMessage
       data-slot="form-message"
       id={formMessageId}
-      className={cn('text-destructive text-sm', className)}
+      className={className}
       {...props}
     >
       {body}
-    </p>
+    </StyledFormMessage>
   )
 }
 

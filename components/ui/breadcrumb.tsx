@@ -1,8 +1,68 @@
 import * as React from 'react'
 import { Slot } from '@radix-ui/react-slot'
 import { ChevronRight, MoreHorizontal } from 'lucide-react'
+import styled from 'styled-components'
 
-import { cn } from '@/lib/utils'
+const StyledBreadcrumbList = styled.ol`
+  color: var(--muted-foreground);
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.375rem;
+  font-size: 0.875rem;
+  line-height: 1.25rem;
+  word-break: break-word;
+
+  @media (min-width: 640px) {
+    gap: 0.625rem;
+  }
+`
+
+const StyledBreadcrumbItem = styled.li`
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+`
+
+const StyledBreadcrumbLink = styled.a`
+  transition: color 150ms;
+
+  &:hover {
+    color: var(--foreground);
+  }
+`
+
+const StyledBreadcrumbPage = styled.span`
+  color: var(--foreground);
+  font-weight: 400;
+`
+
+const StyledBreadcrumbSeparator = styled.li`
+  & > svg {
+    width: 0.875rem;
+    height: 0.875rem;
+  }
+`
+
+const StyledBreadcrumbEllipsis = styled.span`
+  display: flex;
+  width: 2.25rem;
+  height: 2.25rem;
+  align-items: center;
+  justify-content: center;
+`
+
+const SrOnly = styled.span`
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border-width: 0;
+`
 
 function Breadcrumb({ ...props }: React.ComponentProps<'nav'>) {
   return <nav aria-label="breadcrumb" data-slot="breadcrumb" {...props} />
@@ -10,12 +70,9 @@ function Breadcrumb({ ...props }: React.ComponentProps<'nav'>) {
 
 function BreadcrumbList({ className, ...props }: React.ComponentProps<'ol'>) {
   return (
-    <ol
+    <StyledBreadcrumbList
       data-slot="breadcrumb-list"
-      className={cn(
-        'text-muted-foreground flex flex-wrap items-center gap-1.5 text-sm break-words sm:gap-2.5',
-        className,
-      )}
+      className={className}
       {...props}
     />
   )
@@ -23,9 +80,9 @@ function BreadcrumbList({ className, ...props }: React.ComponentProps<'ol'>) {
 
 function BreadcrumbItem({ className, ...props }: React.ComponentProps<'li'>) {
   return (
-    <li
+    <StyledBreadcrumbItem
       data-slot="breadcrumb-item"
-      className={cn('inline-flex items-center gap-1.5', className)}
+      className={className}
       {...props}
     />
   )
@@ -35,15 +92,13 @@ function BreadcrumbLink({
   asChild,
   className,
   ...props
-}: React.ComponentProps<'a'> & {
-  asChild?: boolean
-}) {
-  const Comp = asChild ? Slot : 'a'
+}: React.ComponentProps<'a'> & { asChild?: boolean }) {
+  const Comp = asChild ? Slot : StyledBreadcrumbLink
 
   return (
     <Comp
       data-slot="breadcrumb-link"
-      className={cn('hover:text-foreground transition-colors', className)}
+      className={className}
       {...props}
     />
   )
@@ -51,12 +106,12 @@ function BreadcrumbLink({
 
 function BreadcrumbPage({ className, ...props }: React.ComponentProps<'span'>) {
   return (
-    <span
+    <StyledBreadcrumbPage
       data-slot="breadcrumb-page"
       role="link"
       aria-disabled="true"
       aria-current="page"
-      className={cn('text-foreground font-normal', className)}
+      className={className}
       {...props}
     />
   )
@@ -68,15 +123,15 @@ function BreadcrumbSeparator({
   ...props
 }: React.ComponentProps<'li'>) {
   return (
-    <li
+    <StyledBreadcrumbSeparator
       data-slot="breadcrumb-separator"
       role="presentation"
       aria-hidden="true"
-      className={cn('[&>svg]:size-3.5', className)}
+      className={className}
       {...props}
     >
       {children ?? <ChevronRight />}
-    </li>
+    </StyledBreadcrumbSeparator>
   )
 }
 
@@ -85,16 +140,16 @@ function BreadcrumbEllipsis({
   ...props
 }: React.ComponentProps<'span'>) {
   return (
-    <span
+    <StyledBreadcrumbEllipsis
       data-slot="breadcrumb-ellipsis"
       role="presentation"
       aria-hidden="true"
-      className={cn('flex size-9 items-center justify-center', className)}
+      className={className}
       {...props}
     >
-      <MoreHorizontal className="size-4" />
-      <span className="sr-only">More</span>
-    </span>
+      <MoreHorizontal style={{ width: '1rem', height: '1rem' }} />
+      <SrOnly>More</SrOnly>
+    </StyledBreadcrumbEllipsis>
   )
 }
 

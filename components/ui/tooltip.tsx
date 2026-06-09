@@ -2,8 +2,46 @@
 
 import * as React from 'react'
 import * as TooltipPrimitive from '@radix-ui/react-tooltip'
+import styled from 'styled-components'
 
-import { cn } from '@/lib/utils'
+const StyledTooltipContent = styled(TooltipPrimitive.Content)`
+  background-color: var(--foreground);
+  color: var(--background);
+  z-index: 50;
+  width: fit-content;
+  border-radius: var(--radius-md);
+  padding: 0.375rem 0.75rem;
+  font-size: 0.75rem;
+  line-height: 1rem;
+  text-wrap: balance;
+  transform-origin: var(--radix-tooltip-content-transform-origin);
+  animation-name: enter;
+  animation-duration: 150ms;
+  --tw-enter-opacity: 0;
+  --tw-enter-scale: 0.95;
+
+  &[data-state='closed'] {
+    animation-name: exit;
+    animation-duration: 150ms;
+    --tw-exit-opacity: 0;
+    --tw-exit-scale: 0.95;
+  }
+
+  &[data-side='bottom'] { --tw-enter-translate-y: -0.5rem; }
+  &[data-side='top'] { --tw-enter-translate-y: 0.5rem; }
+  &[data-side='left'] { --tw-enter-translate-x: 0.5rem; }
+  &[data-side='right'] { --tw-enter-translate-x: -0.5rem; }
+`
+
+const StyledArrow = styled(TooltipPrimitive.Arrow)`
+  background-color: var(--foreground);
+  fill: var(--foreground);
+  z-index: 50;
+  width: 0.625rem;
+  height: 0.625rem;
+  transform: translateY(calc(-50% - 2px)) rotate(45deg);
+  border-radius: 2px;
+`
 
 function TooltipProvider({
   delayDuration = 0,
@@ -42,18 +80,15 @@ function TooltipContent({
 }: React.ComponentProps<typeof TooltipPrimitive.Content>) {
   return (
     <TooltipPrimitive.Portal>
-      <TooltipPrimitive.Content
+      <StyledTooltipContent
         data-slot="tooltip-content"
         sideOffset={sideOffset}
-        className={cn(
-          'bg-foreground text-background animate-in fade-in-0 zoom-in-95 data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 z-50 w-fit origin-(--radix-tooltip-content-transform-origin) rounded-md px-3 py-1.5 text-xs text-balance',
-          className,
-        )}
+        className={className}
         {...props}
       >
         {children}
-        <TooltipPrimitive.Arrow className="bg-foreground fill-foreground z-50 size-2.5 translate-y-[calc(-50%_-_2px)] rotate-45 rounded-[2px]" />
-      </TooltipPrimitive.Content>
+        <StyledArrow />
+      </StyledTooltipContent>
     </TooltipPrimitive.Portal>
   )
 }

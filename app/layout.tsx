@@ -6,6 +6,7 @@ import { ConditionalHeader } from '@/components/conditional-header'
 import { StoreHydration } from '@/components/store-hydration'
 import { SignalRInitializer } from '@/components/signalr-initializer'
 import { Toaster } from '@/components/ui/sonner'
+import StyledComponentsRegistry from '@/lib/registry'
 import './globals.css'
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-sans" });
@@ -24,16 +25,18 @@ export const viewport: Viewport = {
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="pt-BR" suppressHydrationWarning>
-      <body className={`${inter.variable} font-sans antialiased min-h-screen bg-background text-foreground`} suppressHydrationWarning>
-        <ThemeProvider attribute="class" defaultTheme="light" enableSystem={false}>
-          <StoreHydration />
-          <SignalRInitializer>
-            <ConditionalHeader />
-            {children}
-          </SignalRInitializer>
-          <Toaster richColors position="top-right" />
-          {process.env.NODE_ENV === 'production' && <Analytics />}
-        </ThemeProvider>
+      <body className={inter.variable} suppressHydrationWarning>
+        <StyledComponentsRegistry>
+          <ThemeProvider attribute="class" defaultTheme="light" enableSystem={false}>
+            <StoreHydration />
+            <SignalRInitializer>
+              <ConditionalHeader />
+              {children}
+            </SignalRInitializer>
+            <Toaster richColors position="top-right" />
+            {process.env.NODE_ENV === 'production' && <Analytics />}
+          </ThemeProvider>
+        </StyledComponentsRegistry>
       </body>
     </html>
   )

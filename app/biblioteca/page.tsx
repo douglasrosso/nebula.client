@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
+import styled from "styled-components";
 import { useStore } from "@/lib/store";
 import { useGames } from "@/lib/hooks/useGames";
 import { AuthGuard } from "@/components/auth-guard";
@@ -12,6 +13,352 @@ function formatPrice(price: number) {
   if (price === 0) return "Gratuito";
   return new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(price);
 }
+
+/* ─── Styled ─── */
+const MainPage = styled.main`
+  min-height: 100vh;
+  padding-top: 5rem;
+  padding-bottom: 4rem;
+`;
+
+const Container = styled.div`
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 0 1rem;
+  @media (min-width: 1024px) { padding: 0 1.5rem; }
+`;
+
+const HeaderRow = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  margin-bottom: 2rem;
+  @media (min-width: 640px) {
+    flex-direction: row;
+    align-items: flex-end;
+    justify-content: space-between;
+  }
+`;
+
+const HeaderLeft = styled.div``;
+
+const PageTitle = styled.h1`
+  font-size: 1.75rem;
+  font-weight: 700;
+  letter-spacing: -0.025em;
+  color: var(--foreground);
+  margin: 0;
+`;
+
+const PageCount = styled.p`
+  font-size: 0.9375rem;
+  margin: 0.125rem 0 0;
+  color: var(--muted-foreground);
+`;
+
+const ViewToggle = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+`;
+
+const ViewButton = styled.button<{ $active?: boolean }>`
+  padding: 0.5rem;
+  border-radius: 0.5rem;
+  transition: all 150ms;
+  border: none;
+  cursor: pointer;
+  background-color: ${({ $active }) => $active ? "color-mix(in oklch, var(--primary) 15%, transparent)" : "var(--surface-raised)"};
+  color: ${({ $active }) => $active ? "var(--primary)" : "var(--muted-foreground)"};
+`;
+
+const SearchWrapper = styled.div`
+  position: relative;
+  margin-bottom: 1.5rem;
+`;
+
+const SearchIcon = styled.span`
+  position: absolute;
+  left: 0.875rem;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--muted-foreground);
+  display: flex;
+  align-items: center;
+  pointer-events: none;
+`;
+
+const SearchInput = styled.input`
+  width: 100%;
+  height: 2.5rem;
+  padding-left: 2.5rem;
+  padding-right: 1rem;
+  border-radius: 0.75rem;
+  font-size: 0.9375rem;
+  color: var(--foreground);
+  background-color: var(--surface-raised);
+  border: none;
+  outline: none;
+  &::placeholder { color: var(--text-tertiary); }
+  @media (min-width: 640px) { width: 18rem; }
+`;
+
+const EmptyState = styled.div`
+  border-radius: 1rem;
+  padding: 4rem;
+  text-align: center;
+  background-color: var(--surface-base);
+`;
+
+const EmptyIcon = styled.div`
+  width: 3.5rem;
+  height: 3.5rem;
+  border-radius: 1rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 1rem;
+  background-color: var(--surface-inset);
+`;
+
+const EmptyTitle = styled.p`
+  font-size: 1.0625rem;
+  font-weight: 600;
+  color: var(--foreground);
+  margin: 0 0 0.25rem;
+`;
+
+const EmptySubtitle = styled.p`
+  font-size: 0.9375rem;
+  margin: 0 0 1.5rem;
+  color: var(--muted-foreground);
+`;
+
+const ExploreLink = styled(Link)`
+  display: inline-flex;
+  padding: 0.625rem 1.25rem;
+  border-radius: 0.75rem;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  color: var(--primary-foreground);
+  background-color: var(--primary);
+  text-decoration: none;
+  transition: opacity 150ms;
+  &:hover { opacity: 0.8; }
+`;
+
+const GridView = styled.div`
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 0.75rem;
+  @media (min-width: 768px) { grid-template-columns: repeat(3, 1fr); }
+  @media (min-width: 1024px) { grid-template-columns: repeat(4, 1fr); }
+  @media (min-width: 1280px) { grid-template-columns: repeat(5, 1fr); }
+`;
+
+const GridCard = styled(Link)`
+  display: block;
+  position: relative;
+  overflow: hidden;
+  border-radius: 0.75rem;
+  transition: transform 150ms;
+  background-color: var(--surface-raised);
+  text-decoration: none;
+  &:hover { transform: translateY(-0.125rem); }
+`;
+
+const GridImageWrapper = styled.div`
+  position: relative;
+  aspect-ratio: 460/215;
+`;
+
+const GridOverlay = styled.div`
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: oklch(0 0 0 / 0.6);
+  transition: opacity 200ms;
+  ${GridCard}:hover & { opacity: 1; }
+`;
+
+const PlayBadge = styled.span`
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  padding: 0.375rem 0.75rem;
+  border-radius: 9999px;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  background-color: var(--primary);
+  color: var(--primary-foreground);
+`;
+
+const GridCardBody = styled.div`
+  padding: 0.75rem;
+`;
+
+const GridCardTitle = styled.p`
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--foreground);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  margin: 0;
+`;
+
+const GridCardGenres = styled.p`
+  font-size: 0.6875rem;
+  margin: 0.125rem 0 0;
+  color: var(--text-tertiary);
+`;
+
+const ListView = styled.div`
+  border-radius: 1rem;
+  overflow: hidden;
+  background-color: var(--surface-base);
+`;
+
+const ListItem = styled(Link)<{ $notFirst?: boolean }>`
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.75rem 1rem;
+  transition: background-color 150ms;
+  text-decoration: none;
+  border-top: ${({ $notFirst }) => $notFirst ? "1px solid var(--border)" : "none"};
+  &:hover { background-color: var(--surface-raised); }
+`;
+
+const ListImageWrapper = styled.div`
+  position: relative;
+  width: 5rem;
+  height: 3rem;
+  border-radius: 0.5rem;
+  overflow: hidden;
+  flex-shrink: 0;
+`;
+
+const ListInfo = styled.div`
+  flex: 1;
+  min-width: 0;
+`;
+
+const ListTitle = styled.p`
+  font-size: 0.9375rem;
+  font-weight: 600;
+  color: var(--foreground);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  margin: 0;
+`;
+
+const ListGenres = styled.p`
+  font-size: 0.8125rem;
+  color: var(--muted-foreground);
+  margin: 0;
+`;
+
+const ListPlayBadge = styled.span`
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  padding: 0.375rem 0.75rem;
+  border-radius: 9999px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  flex-shrink: 0;
+  opacity: 0;
+  transition: opacity 150ms;
+  background-color: var(--primary);
+  color: var(--primary-foreground);
+  ${ListItem}:hover & { opacity: 1; }
+`;
+
+const WishlistSection = styled.section`
+  margin-top: 3rem;
+`;
+
+const WishlistHeader = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 1.25rem;
+`;
+
+const SectionTitle = styled.h2`
+  font-size: 1.375rem;
+  font-weight: 700;
+  letter-spacing: -0.025em;
+  color: var(--foreground);
+  margin: 0;
+`;
+
+const ViewAllLink = styled(Link)`
+  font-size: 0.9375rem;
+  font-weight: 500;
+  color: var(--primary);
+  text-decoration: none;
+  transition: opacity 150ms;
+  &:hover { opacity: 0.7; }
+`;
+
+const WishlistGrid = styled.div`
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0.75rem;
+  @media (min-width: 768px) { grid-template-columns: repeat(2, 1fr); }
+  @media (min-width: 1024px) { grid-template-columns: repeat(3, 1fr); }
+`;
+
+const WishlistCard = styled(Link)`
+  display: flex;
+  gap: 0.75rem;
+  padding: 0.75rem;
+  border-radius: 0.75rem;
+  background-color: var(--surface-raised);
+  text-decoration: none;
+  transition: background-color 150ms;
+  &:hover { background-color: var(--surface-inset); }
+`;
+
+const WishlistImageWrapper = styled.div`
+  position: relative;
+  width: 6rem;
+  height: 3.5rem;
+  border-radius: 0.5rem;
+  overflow: hidden;
+  flex-shrink: 0;
+`;
+
+const WishlistInfo = styled.div`
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+`;
+
+const WishlistTitle = styled.p`
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--foreground);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  margin: 0;
+`;
+
+const WishlistPrice = styled.p`
+  font-size: 0.8125rem;
+  font-weight: 500;
+  margin: 0.125rem 0 0;
+  color: var(--primary);
+`;
 
 export default function LibraryPage() {
   const { library, wishlist, apiGames } = useStore();
@@ -29,151 +376,97 @@ export default function LibraryPage() {
 
   return (
     <AuthGuard>
-      <main id="main-content" className="min-h-screen pt-20 pb-16">
-        <div className="container mx-auto px-4 lg:px-6">
-          <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4 mb-8">
-            <div>
-              <h1 className="text-[28px] font-bold tracking-tight text-foreground">Biblioteca</h1>
-              <p className="text-[15px] mt-0.5 text-muted-foreground">
-                {library.length} {library.length === 1 ? "jogo" : "jogos"}
-              </p>
-            </div>
-            <div className="flex items-center gap-2">
-              <button
-                onClick={() => setViewMode("grid")}
-                className={`p-2 rounded-lg transition-colors ${viewMode === "grid" ? "bg-primary/15 text-primary" : "bg-surface-raised text-muted-foreground"}`}
-                aria-label="Visualização em grade"
-              >
-                <Grid3X3 className="w-4 h-4" />
-              </button>
-              <button
-                onClick={() => setViewMode("list")}
-                className={`p-2 rounded-lg transition-colors ${viewMode === "list" ? "bg-primary/15 text-primary" : "bg-surface-raised text-muted-foreground"}`}
-                aria-label="Visualização em lista"
-              >
-                <List className="w-4 h-4" />
-              </button>
-            </div>
-          </div>
+      <MainPage id="main-content">
+        <Container>
+          <HeaderRow>
+            <HeaderLeft>
+              <PageTitle>Biblioteca</PageTitle>
+              <PageCount>{library.length} {library.length === 1 ? "jogo" : "jogos"}</PageCount>
+            </HeaderLeft>
+            <ViewToggle>
+              <ViewButton onClick={() => setViewMode("grid")} $active={viewMode === "grid"} aria-label="Visualização em grade">
+                <Grid3X3 style={{ width: "1rem", height: "1rem" }} />
+              </ViewButton>
+              <ViewButton onClick={() => setViewMode("list")} $active={viewMode === "list"} aria-label="Visualização em lista">
+                <List style={{ width: "1rem", height: "1rem" }} />
+              </ViewButton>
+            </ViewToggle>
+          </HeaderRow>
 
-          <div className="relative mb-6">
-            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-            <input
+          <SearchWrapper>
+            <SearchIcon><Search style={{ width: "1rem", height: "1rem" }} /></SearchIcon>
+            <SearchInput
               type="search"
               placeholder="Pesquisar na biblioteca..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full sm:w-72 h-10 pl-10 pr-4 rounded-xl text-[15px] text-foreground bg-surface-raised outline-none placeholder:text-text-tertiary"
             />
-          </div>
+          </SearchWrapper>
 
           {libraryGames.length === 0 ? (
-            <div className="rounded-2xl p-16 text-center bg-surface-base">
-              <div className="w-14 h-14 rounded-2xl flex items-center justify-center mx-auto mb-4 bg-surface-inset">
-                <Library className="w-7 h-7 text-muted-foreground" />
-              </div>
-              <p className="text-[17px] font-semibold text-foreground mb-1">
-                {library.length === 0 ? "Biblioteca vazia" : "Nenhum jogo encontrado"}
-              </p>
-              <p className="text-[15px] mb-6 text-muted-foreground">
-                {library.length === 0 ? "Compre jogos na loja para adicioná-los aqui." : "Tente uma busca diferente."}
-              </p>
-              {library.length === 0 && (
-                <Link
-                  href="/loja"
-                  className="inline-flex px-5 py-2.5 rounded-xl text-[15px] font-semibold text-primary-foreground bg-primary transition-opacity hover:opacity-80"
-                >
-                  Explorar loja
-                </Link>
-              )}
-            </div>
+            <EmptyState>
+              <EmptyIcon><Library style={{ width: "1.75rem", height: "1.75rem", color: "var(--muted-foreground)" }} /></EmptyIcon>
+              <EmptyTitle>{library.length === 0 ? "Biblioteca vazia" : "Nenhum jogo encontrado"}</EmptyTitle>
+              <EmptySubtitle>{library.length === 0 ? "Compre jogos na loja para adicioná-los aqui." : "Tente uma busca diferente."}</EmptySubtitle>
+              {library.length === 0 && <ExploreLink href="/loja">Explorar loja</ExploreLink>}
+            </EmptyState>
           ) : viewMode === "grid" ? (
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
+            <GridView>
               {libraryGames.map((game) => (
-                <Link
-                  key={game.id}
-                  href={`/jogo/${game.id}`}
-                  className="group relative overflow-hidden rounded-xl transition-transform hover:-translate-y-0.5 bg-surface-raised"
-                >
-                  <div className="relative aspect-[460/215]">
-                    <Image
-                      src={game.coverImage}
-                      alt={game.title}
-                      fill
-                      className="object-cover transition-transform duration-500 group-hover:scale-[1.04]"
-                      sizes="(max-width: 640px) 50vw, (max-width: 768px) 33vw, 20vw"
-                    />
-                    <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex items-center justify-center bg-black/60">
-                      <span className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[13px] font-semibold bg-primary text-primary-foreground">
-                        <Play className="w-3.5 h-3.5" /> Jogar
-                      </span>
-                    </div>
-                  </div>
-                  <div className="p-3">
-                    <p className="text-[13px] font-semibold text-foreground truncate">{game.title}</p>
-                    <p className="text-[11px] mt-0.5 text-text-tertiary">
-                      {game.genres.slice(0, 2).join(" · ")}
-                    </p>
-                  </div>
-                </Link>
+                <GridCard key={game.id} href={`/jogo/${game.id}`}>
+                  <GridImageWrapper>
+                    <Image src={game.coverImage} alt={game.title} fill style={{ objectFit: "cover", transition: "transform 500ms" }} sizes="(max-width: 640px) 50vw, (max-width: 768px) 33vw, 20vw" />
+                    <GridOverlay>
+                      <PlayBadge><Play style={{ width: "0.875rem", height: "0.875rem" }} /> Jogar</PlayBadge>
+                    </GridOverlay>
+                  </GridImageWrapper>
+                  <GridCardBody>
+                    <GridCardTitle>{game.title}</GridCardTitle>
+                    <GridCardGenres>{game.genres.slice(0, 2).join(" · ")}</GridCardGenres>
+                  </GridCardBody>
+                </GridCard>
               ))}
-            </div>
+            </GridView>
           ) : (
-            <div className="rounded-2xl overflow-hidden bg-surface-base">
+            <ListView>
               {libraryGames.map((game, i) => (
-                <Link
-                  key={game.id}
-                  href={`/jogo/${game.id}`}
-                  className={`group flex items-center gap-4 px-4 py-3 transition-colors hover:bg-surface-raised ${i > 0 ? "border-t border-border" : ""}`}
-                >
-                  <div className="relative w-20 h-12 rounded-lg overflow-hidden flex-shrink-0">
-                    <Image src={game.coverImage} alt={game.title} fill className="object-cover" sizes="80px" />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-[15px] font-semibold text-foreground truncate">{game.title}</p>
-                    <p className="text-[13px] text-muted-foreground">
-                      {game.genres.slice(0, 2).join(" · ")}
-                    </p>
-                  </div>
-                  <span className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[12px] font-semibold flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity bg-primary text-primary-foreground">
-                    <Play className="w-3 h-3" /> Jogar
-                  </span>
-                </Link>
+                <ListItem key={game.id} href={`/jogo/${game.id}`} $notFirst={i > 0}>
+                  <ListImageWrapper>
+                    <Image src={game.coverImage} alt={game.title} fill style={{ objectFit: "cover" }} sizes="80px" />
+                  </ListImageWrapper>
+                  <ListInfo>
+                    <ListTitle>{game.title}</ListTitle>
+                    <ListGenres>{game.genres.slice(0, 2).join(" · ")}</ListGenres>
+                  </ListInfo>
+                  <ListPlayBadge><Play style={{ width: "0.75rem", height: "0.75rem" }} /> Jogar</ListPlayBadge>
+                </ListItem>
               ))}
-            </div>
+            </ListView>
           )}
 
           {wishlistGames.length > 0 && (
-            <section className="mt-12">
-              <div className="flex items-center justify-between mb-5">
-                <h2 className="text-[22px] font-bold tracking-tight text-foreground">Lista de Desejos</h2>
-                <Link href="/lista-desejos" className="text-[15px] font-medium transition-opacity hover:opacity-70 text-primary">
-                  Ver tudo
-                </Link>
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+            <WishlistSection>
+              <WishlistHeader>
+                <SectionTitle>Lista de Desejos</SectionTitle>
+                <ViewAllLink href="/lista-desejos">Ver tudo</ViewAllLink>
+              </WishlistHeader>
+              <WishlistGrid>
                 {wishlistGames.slice(0, 3).map((game) => (
-                  <Link
-                    key={game.id}
-                    href={`/jogo/${game.id}`}
-                    className="group flex gap-3 p-3 rounded-xl transition-colors bg-surface-raised"
-                  >
-                    <div className="relative w-24 h-14 rounded-lg overflow-hidden flex-shrink-0">
-                      <Image src={game.coverImage} alt={game.title} fill className="object-cover" sizes="96px" />
-                    </div>
-                    <div className="flex-1 min-w-0 flex flex-col justify-center">
-                      <p className="text-[13px] font-semibold text-foreground truncate">{game.title}</p>
-                      <p className="text-[13px] font-medium mt-0.5 text-primary">
-                        {formatPrice(game.price)}
-                      </p>
-                    </div>
-                  </Link>
+                  <WishlistCard key={game.id} href={`/jogo/${game.id}`}>
+                    <WishlistImageWrapper>
+                      <Image src={game.coverImage} alt={game.title} fill style={{ objectFit: "cover" }} sizes="96px" />
+                    </WishlistImageWrapper>
+                    <WishlistInfo>
+                      <WishlistTitle>{game.title}</WishlistTitle>
+                      <WishlistPrice>{formatPrice(game.price)}</WishlistPrice>
+                    </WishlistInfo>
+                  </WishlistCard>
                 ))}
-              </div>
-            </section>
+              </WishlistGrid>
+            </WishlistSection>
           )}
-        </div>
-      </main>
+        </Container>
+      </MainPage>
     </AuthGuard>
   );
 }

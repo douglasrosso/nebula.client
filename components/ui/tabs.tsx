@@ -2,17 +2,86 @@
 
 import * as React from 'react'
 import * as TabsPrimitive from '@radix-ui/react-tabs'
+import styled from 'styled-components'
 
-import { cn } from '@/lib/utils'
+const StyledTabsRoot = styled(TabsPrimitive.Root)`
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+`
+
+const StyledTabsList = styled(TabsPrimitive.List)`
+  background-color: var(--muted);
+  color: var(--muted-foreground);
+  display: inline-flex;
+  height: 2.25rem;
+  width: fit-content;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-lg);
+  padding: 3px;
+`
+
+const StyledTabsTrigger = styled(TabsPrimitive.Trigger)`
+  color: var(--foreground);
+  display: inline-flex;
+  height: calc(100% - 1px);
+  flex: 1;
+  align-items: center;
+  justify-content: center;
+  gap: 0.375rem;
+  border-radius: var(--radius-md);
+  border: 1px solid transparent;
+  padding: 0.25rem 0.5rem;
+  font-size: 0.875rem;
+  line-height: 1.25rem;
+  font-weight: 500;
+  white-space: nowrap;
+  transition: color 150ms, box-shadow 150ms;
+  outline: none;
+  cursor: pointer;
+  background-color: transparent;
+
+  & svg {
+    pointer-events: none;
+    flex-shrink: 0;
+  }
+
+  & svg:not([class*='size-']) {
+    width: 1rem;
+    height: 1rem;
+  }
+
+  &[data-state='active'] {
+    background-color: var(--background);
+    box-shadow: 0 1px 2px 0 oklch(0 0 0 / 0.05);
+  }
+
+  &:focus-visible {
+    border-color: var(--ring);
+    box-shadow: 0 0 0 3px color-mix(in oklch, var(--ring) 50%, transparent);
+    outline: 1px solid var(--ring);
+  }
+
+  &:disabled {
+    pointer-events: none;
+    opacity: 0.5;
+  }
+`
+
+const StyledTabsContent = styled(TabsPrimitive.Content)`
+  flex: 1;
+  outline: none;
+`
 
 function Tabs({
   className,
   ...props
 }: React.ComponentProps<typeof TabsPrimitive.Root>) {
   return (
-    <TabsPrimitive.Root
+    <StyledTabsRoot
       data-slot="tabs"
-      className={cn('flex flex-col gap-2', className)}
+      className={className}
       {...props}
     />
   )
@@ -23,12 +92,9 @@ function TabsList({
   ...props
 }: React.ComponentProps<typeof TabsPrimitive.List>) {
   return (
-    <TabsPrimitive.List
+    <StyledTabsList
       data-slot="tabs-list"
-      className={cn(
-        'bg-muted text-muted-foreground inline-flex h-9 w-fit items-center justify-center rounded-lg p-[3px]',
-        className,
-      )}
+      className={className}
       {...props}
     />
   )
@@ -39,12 +105,9 @@ function TabsTrigger({
   ...props
 }: React.ComponentProps<typeof TabsPrimitive.Trigger>) {
   return (
-    <TabsPrimitive.Trigger
+    <StyledTabsTrigger
       data-slot="tabs-trigger"
-      className={cn(
-        "data-[state=active]:bg-background dark:data-[state=active]:text-foreground focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:outline-ring dark:data-[state=active]:border-input dark:data-[state=active]:bg-input/30 text-foreground dark:text-muted-foreground inline-flex h-[calc(100%-1px)] flex-1 items-center justify-center gap-1.5 rounded-md border border-transparent px-2 py-1 text-sm font-medium whitespace-nowrap transition-[color,box-shadow] focus-visible:ring-[3px] focus-visible:outline-1 disabled:pointer-events-none disabled:opacity-50 data-[state=active]:shadow-sm [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
-        className,
-      )}
+      className={className}
       {...props}
     />
   )
@@ -55,9 +118,9 @@ function TabsContent({
   ...props
 }: React.ComponentProps<typeof TabsPrimitive.Content>) {
   return (
-    <TabsPrimitive.Content
+    <StyledTabsContent
       data-slot="tabs-content"
-      className={cn('flex-1 outline-none', className)}
+      className={className}
       {...props}
     />
   )

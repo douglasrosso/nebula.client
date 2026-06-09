@@ -1,29 +1,112 @@
 'use client'
 
 import * as React from 'react'
+import styled from 'styled-components'
 
-import { cn } from '@/lib/utils'
+const TableContainer = styled.div`
+  position: relative;
+  width: 100%;
+  overflow-x: auto;
+`
+
+const StyledTable = styled.table`
+  width: 100%;
+  caption-side: bottom;
+  font-size: 0.875rem;
+  line-height: 1.25rem;
+`
+
+const StyledThead = styled.thead`
+  & tr {
+    border-bottom: 1px solid var(--border);
+  }
+`
+
+const StyledTbody = styled.tbody`
+  & tr:last-child {
+    border-bottom: none;
+  }
+`
+
+const StyledTfoot = styled.tfoot`
+  background-color: color-mix(in oklch, var(--muted) 50%, transparent);
+  border-top: 1px solid var(--border);
+  font-weight: 500;
+
+  & > tr:last-child {
+    border-bottom: none;
+  }
+`
+
+const StyledTr = styled.tr`
+  border-bottom: 1px solid var(--border);
+  transition: colors 150ms;
+
+  &:hover {
+    background-color: color-mix(in oklch, var(--muted) 50%, transparent);
+  }
+
+  &[data-state='selected'] {
+    background-color: var(--muted);
+  }
+`
+
+const StyledTh = styled.th`
+  color: var(--foreground);
+  height: 2.5rem;
+  padding: 0 0.5rem;
+  text-align: left;
+  vertical-align: middle;
+  font-weight: 500;
+  white-space: nowrap;
+
+  &:has([role='checkbox']) {
+    padding-right: 0;
+  }
+
+  & > [role='checkbox'] {
+    transform: translateY(2px);
+  }
+`
+
+const StyledTd = styled.td`
+  padding: 0.5rem;
+  vertical-align: middle;
+  white-space: nowrap;
+
+  &:has([role='checkbox']) {
+    padding-right: 0;
+  }
+
+  & > [role='checkbox'] {
+    transform: translateY(2px);
+  }
+`
+
+const StyledCaption = styled.caption`
+  color: var(--muted-foreground);
+  margin-top: 1rem;
+  font-size: 0.875rem;
+  line-height: 1.25rem;
+`
 
 function Table({ className, ...props }: React.ComponentProps<'table'>) {
   return (
-    <div
-      data-slot="table-container"
-      className="relative w-full overflow-x-auto"
-    >
-      <table
+    <TableContainer data-slot="table-container">
+      <StyledTable
         data-slot="table"
-        className={cn('w-full caption-bottom text-sm', className)}
+        className={className}
         {...props}
       />
-    </div>
+    </TableContainer>
   )
 }
 
 function TableHeader({ className, ...props }: React.ComponentProps<'thead'>) {
   return (
-    <thead
+    <StyledThead
       data-slot="table-header"
-      className={cn('[&_tr]:border-b', className)}
+      className={className}
       {...props}
     />
   )
@@ -31,9 +114,9 @@ function TableHeader({ className, ...props }: React.ComponentProps<'thead'>) {
 
 function TableBody({ className, ...props }: React.ComponentProps<'tbody'>) {
   return (
-    <tbody
+    <StyledTbody
       data-slot="table-body"
-      className={cn('[&_tr:last-child]:border-0', className)}
+      className={className}
       {...props}
     />
   )
@@ -41,12 +124,9 @@ function TableBody({ className, ...props }: React.ComponentProps<'tbody'>) {
 
 function TableFooter({ className, ...props }: React.ComponentProps<'tfoot'>) {
   return (
-    <tfoot
+    <StyledTfoot
       data-slot="table-footer"
-      className={cn(
-        'bg-muted/50 border-t font-medium [&>tr]:last:border-b-0',
-        className,
-      )}
+      className={className}
       {...props}
     />
   )
@@ -54,12 +134,9 @@ function TableFooter({ className, ...props }: React.ComponentProps<'tfoot'>) {
 
 function TableRow({ className, ...props }: React.ComponentProps<'tr'>) {
   return (
-    <tr
+    <StyledTr
       data-slot="table-row"
-      className={cn(
-        'hover:bg-muted/50 data-[state=selected]:bg-muted border-b transition-colors',
-        className,
-      )}
+      className={className}
       {...props}
     />
   )
@@ -67,12 +144,9 @@ function TableRow({ className, ...props }: React.ComponentProps<'tr'>) {
 
 function TableHead({ className, ...props }: React.ComponentProps<'th'>) {
   return (
-    <th
+    <StyledTh
       data-slot="table-head"
-      className={cn(
-        'text-foreground h-10 px-2 text-left align-middle font-medium whitespace-nowrap [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px]',
-        className,
-      )}
+      className={className}
       {...props}
     />
   )
@@ -80,12 +154,9 @@ function TableHead({ className, ...props }: React.ComponentProps<'th'>) {
 
 function TableCell({ className, ...props }: React.ComponentProps<'td'>) {
   return (
-    <td
+    <StyledTd
       data-slot="table-cell"
-      className={cn(
-        'p-2 align-middle whitespace-nowrap [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px]',
-        className,
-      )}
+      className={className}
       {...props}
     />
   )
@@ -96,9 +167,9 @@ function TableCaption({
   ...props
 }: React.ComponentProps<'caption'>) {
   return (
-    <caption
+    <StyledCaption
       data-slot="table-caption"
-      className={cn('text-muted-foreground mt-4 text-sm', className)}
+      className={className}
       {...props}
     />
   )

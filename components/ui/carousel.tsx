@@ -5,8 +5,8 @@ import useEmblaCarousel, {
   type UseEmblaCarouselType,
 } from 'embla-carousel-react'
 import { ArrowLeft, ArrowRight } from 'lucide-react'
+import styled from 'styled-components'
 
-import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 
 type CarouselApi = UseEmblaCarouselType[1]
@@ -41,6 +41,47 @@ function useCarousel() {
 
   return context
 }
+
+const StyledCarouselWrapper = styled.div`
+  position: relative;
+`
+
+const CarouselInner = styled.div`
+  overflow: hidden;
+`
+
+const CarouselTrack = styled.div<{ $isVertical?: boolean }>`
+  display: flex;
+  ${({ $isVertical }) =>
+    $isVertical
+      ? `flex-direction: column; margin-top: -1rem;`
+      : `margin-left: -1rem;`}
+`
+
+const CarouselSlide = styled.div<{ $isVertical?: boolean }>`
+  min-width: 0;
+  flex-shrink: 0;
+  flex-grow: 0;
+  flex-basis: 100%;
+  ${({ $isVertical }) =>
+    $isVertical ? `padding-top: 1rem;` : `padding-left: 1rem;`}
+`
+
+const CarouselButtonBase = styled(Button)<{ $horizontal?: boolean; $isVertical?: boolean; $isPrev?: boolean }>`
+  position: absolute;
+  width: 2rem;
+  height: 2rem;
+  border-radius: 9999px;
+
+  ${({ $isVertical, $isPrev }) =>
+    $isVertical
+      ? $isPrev
+        ? `top: -3rem; left: 50%; transform: translateX(-50%) rotate(90deg);`
+        : `bottom: -3rem; left: 50%; transform: translateX(-50%) rotate(90deg);`
+      : $isPrev
+        ? `top: 50%; left: -3rem; transform: translateY(-50%);`
+        : `top: 50%; right: -3rem; transform: translateY(-50%);`}
+`
 
 function Carousel({
   orientation = 'horizontal',
@@ -118,16 +159,16 @@ function Carousel({
         canScrollNext,
       }}
     >
-      <div
+      <StyledCarouselWrapper
         onKeyDownCapture={handleKeyDown}
-        className={cn('relative', className)}
+        className={className}
         role="region"
         aria-roledescription="carousel"
         data-slot="carousel"
         {...props}
       >
         {children}
-      </div>
+      </StyledCarouselWrapper>
     </CarouselContext.Provider>
   )
 }
@@ -136,20 +177,13 @@ function CarouselContent({ className, ...props }: React.ComponentProps<'div'>) {
   const { carouselRef, orientation } = useCarousel()
 
   return (
-    <div
-      ref={carouselRef}
-      className="overflow-hidden"
-      data-slot="carousel-content"
-    >
-      <div
-        className={cn(
-          'flex',
-          orientation === 'horizontal' ? '-ml-4' : '-mt-4 flex-col',
-          className,
-        )}
+    <CarouselInner ref={carouselRef} data-slot="carousel-content">
+      <CarouselTrack
+        $isVertical={orientation === 'vertical'}
+        className={className}
         {...props}
       />
-    </div>
+    </CarouselInner>
   )
 }
 
@@ -157,15 +191,12 @@ function CarouselItem({ className, ...props }: React.ComponentProps<'div'>) {
   const { orientation } = useCarousel()
 
   return (
-    <div
+    <CarouselSlide
       role="group"
       aria-roledescription="slide"
       data-slot="carousel-item"
-      className={cn(
-        'min-w-0 shrink-0 grow-0 basis-full',
-        orientation === 'horizontal' ? 'pl-4' : 'pt-4',
-        className,
-      )}
+      $isVertical={orientation === 'vertical'}
+      className={className}
       {...props}
     />
   )
@@ -180,24 +211,20 @@ function CarouselPrevious({
   const { orientation, scrollPrev, canScrollPrev } = useCarousel()
 
   return (
-    <Button
+    <CarouselButtonBase
       data-slot="carousel-previous"
       variant={variant}
       size={size}
-      className={cn(
-        'absolute size-8 rounded-full',
-        orientation === 'horizontal'
-          ? 'top-1/2 -left-12 -translate-y-1/2'
-          : '-top-12 left-1/2 -translate-x-1/2 rotate-90',
-        className,
-      )}
+      $isVertical={orientation === 'vertical'}
+      $isPrev={true}
+      className={className}
       disabled={!canScrollPrev}
       onClick={scrollPrev}
       {...props}
     >
       <ArrowLeft />
-      <span className="sr-only">Previous slide</span>
-    </Button>
+      <span style={{ position: 'absolute', width: '1px', height: '1px', padding: 0, margin: '-1px', overflow: 'hidden', clip: 'rect(0,0,0,0)', whiteSpace: 'nowrap', borderWidth: 0 }}>Previous slide</span>
+    </CarouselButtonBase>
   )
 }
 
@@ -210,24 +237,20 @@ function CarouselNext({
   const { orientation, scrollNext, canScrollNext } = useCarousel()
 
   return (
-    <Button
+    <CarouselButtonBase
       data-slot="carousel-next"
       variant={variant}
       size={size}
-      className={cn(
-        'absolute size-8 rounded-full',
-        orientation === 'horizontal'
-          ? 'top-1/2 -right-12 -translate-y-1/2'
-          : '-bottom-12 left-1/2 -translate-x-1/2 rotate-90',
-        className,
-      )}
+      $isVertical={orientation === 'vertical'}
+      $isPrev={false}
+      className={className}
       disabled={!canScrollNext}
       onClick={scrollNext}
       {...props}
     >
       <ArrowRight />
-      <span className="sr-only">Next slide</span>
-    </Button>
+      <span style={{ position: 'absolute', width: '1px', height: '1px', padding: 0, margin: '-1px', overflow: 'hidden', clip: 'rect(0,0,0,0)', whiteSpace: 'nowrap', borderWidth: 0 }}>Next slide</span>
+    </CarouselButtonBase>
   )
 }
 

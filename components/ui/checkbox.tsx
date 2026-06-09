@@ -3,29 +3,66 @@
 import * as React from 'react'
 import * as CheckboxPrimitive from '@radix-ui/react-checkbox'
 import { CheckIcon } from 'lucide-react'
+import styled from 'styled-components'
 
-import { cn } from '@/lib/utils'
+const StyledCheckboxRoot = styled(CheckboxPrimitive.Root)`
+  border: 1px solid var(--input);
+  width: 1rem;
+  height: 1rem;
+  flex-shrink: 0;
+  border-radius: 4px;
+  box-shadow: 0 1px 2px 0 oklch(0 0 0 / 0.05);
+  transition: box-shadow 150ms;
+  outline: none;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  &[data-state='checked'] {
+    background-color: var(--primary);
+    color: var(--primary-foreground);
+    border-color: var(--primary);
+  }
+
+  &:focus-visible {
+    border-color: var(--ring);
+    box-shadow: 0 0 0 3px color-mix(in oklch, var(--ring) 50%, transparent);
+  }
+
+  &[aria-invalid='true'] {
+    border-color: var(--destructive);
+    box-shadow: 0 0 0 3px color-mix(in oklch, var(--destructive) 20%, transparent);
+  }
+
+  &:disabled {
+    cursor: not-allowed;
+    opacity: 0.5;
+  }
+`
+
+const StyledCheckboxIndicator = styled(CheckboxPrimitive.Indicator)`
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: currentColor;
+  transition: none;
+`
 
 function Checkbox({
   className,
   ...props
 }: React.ComponentProps<typeof CheckboxPrimitive.Root>) {
   return (
-    <CheckboxPrimitive.Root
+    <StyledCheckboxRoot
       data-slot="checkbox"
-      className={cn(
-        'peer border-input dark:bg-input/30 data-[state=checked]:bg-primary data-[state=checked]:text-primary-foreground dark:data-[state=checked]:bg-primary data-[state=checked]:border-primary focus-visible:border-ring focus-visible:ring-ring/50 aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive size-4 shrink-0 rounded-[4px] border shadow-xs transition-shadow outline-none focus-visible:ring-[3px] disabled:cursor-not-allowed disabled:opacity-50',
-        className,
-      )}
+      className={className}
       {...props}
     >
-      <CheckboxPrimitive.Indicator
-        data-slot="checkbox-indicator"
-        className="flex items-center justify-center text-current transition-none"
-      >
-        <CheckIcon className="size-3.5" />
-      </CheckboxPrimitive.Indicator>
-    </CheckboxPrimitive.Root>
+      <StyledCheckboxIndicator data-slot="checkbox-indicator">
+        <CheckIcon style={{ width: '0.875rem', height: '0.875rem' }} />
+      </StyledCheckboxIndicator>
+    </StyledCheckboxRoot>
   )
 }
 

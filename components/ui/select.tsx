@@ -3,8 +3,204 @@
 import * as React from 'react'
 import * as SelectPrimitive from '@radix-ui/react-select'
 import { CheckIcon, ChevronDownIcon, ChevronUpIcon } from 'lucide-react'
+import styled from 'styled-components'
 
-import { cn } from '@/lib/utils'
+const StyledSelectTrigger = styled(SelectPrimitive.Trigger)`
+  border: 1px solid var(--input);
+  display: flex;
+  width: fit-content;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  border-radius: var(--radius-md);
+  background-color: transparent;
+  padding: 0.5rem 0.75rem;
+  font-size: 0.875rem;
+  line-height: 1.25rem;
+  white-space: nowrap;
+  box-shadow: 0 1px 2px 0 oklch(0 0 0 / 0.05);
+  transition: color 150ms, box-shadow 150ms;
+  outline: none;
+  cursor: pointer;
+  color: inherit;
+
+  &[data-size='default'] { height: 2.25rem; }
+  &[data-size='sm'] { height: 2rem; }
+
+  & svg {
+    pointer-events: none;
+    flex-shrink: 0;
+  }
+
+  & svg:not([class*='size-']) {
+    width: 1rem;
+    height: 1rem;
+    color: var(--muted-foreground);
+  }
+
+  & [data-placeholder] {
+    color: var(--muted-foreground);
+  }
+
+  *[data-slot='select-value'] {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    overflow: hidden;
+    display: -webkit-box;
+    -webkit-line-clamp: 1;
+    -webkit-box-orient: vertical;
+  }
+
+  &:focus-visible {
+    border-color: var(--ring);
+    box-shadow: 0 0 0 3px color-mix(in oklch, var(--ring) 50%, transparent);
+  }
+
+  &[aria-invalid='true'] {
+    border-color: var(--destructive);
+    box-shadow: 0 0 0 3px color-mix(in oklch, var(--destructive) 20%, transparent);
+  }
+
+  &:disabled {
+    cursor: not-allowed;
+    opacity: 0.5;
+  }
+
+  &:hover {
+    background-color: color-mix(in oklch, var(--input) 50%, transparent);
+  }
+`
+
+const StyledSelectContent = styled(SelectPrimitive.Content)<{ $isPopper?: boolean }>`
+  background-color: var(--popover);
+  color: var(--popover-foreground);
+  position: relative;
+  z-index: 50;
+  max-height: var(--radix-select-content-available-height);
+  min-width: 8rem;
+  overflow-x: hidden;
+  overflow-y: auto;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border);
+  box-shadow: 0 4px 6px -1px oklch(0 0 0 / 0.1), 0 2px 4px -2px oklch(0 0 0 / 0.1);
+  transform-origin: var(--radix-select-content-transform-origin);
+
+  &[data-state='open'] {
+    animation-name: enter;
+    animation-duration: 150ms;
+    --tw-enter-opacity: 0;
+    --tw-enter-scale: 0.95;
+  }
+
+  &[data-state='closed'] {
+    animation-name: exit;
+    animation-duration: 150ms;
+    --tw-exit-opacity: 0;
+    --tw-exit-scale: 0.95;
+  }
+
+  &[data-side='bottom'] { --tw-enter-translate-y: -0.5rem; }
+  &[data-side='top'] { --tw-enter-translate-y: 0.5rem; }
+  &[data-side='left'] { --tw-enter-translate-x: 0.5rem; }
+  &[data-side='right'] { --tw-enter-translate-x: -0.5rem; }
+
+  ${({ $isPopper }) =>
+    $isPopper &&
+    `
+    &[data-side='bottom'] { transform: translateY(0.25rem); }
+    &[data-side='top'] { transform: translateY(-0.25rem); }
+    &[data-side='left'] { transform: translateX(-0.25rem); }
+    &[data-side='right'] { transform: translateX(0.25rem); }
+  `}
+`
+
+const StyledSelectViewport = styled(SelectPrimitive.Viewport)<{ $isPopper?: boolean }>`
+  padding: 0.25rem;
+
+  ${({ $isPopper }) =>
+    $isPopper &&
+    `
+    height: var(--radix-select-trigger-height);
+    width: 100%;
+    min-width: var(--radix-select-trigger-width);
+    scroll-margin: 0.25rem 0;
+  `}
+`
+
+const StyledSelectLabel = styled(SelectPrimitive.Label)`
+  color: var(--muted-foreground);
+  padding: 0.25rem 0.5rem 0.375rem;
+  font-size: 0.75rem;
+  line-height: 1rem;
+`
+
+const StyledSelectItem = styled(SelectPrimitive.Item)`
+  position: relative;
+  display: flex;
+  width: 100%;
+  cursor: default;
+  align-items: center;
+  gap: 0.5rem;
+  border-radius: calc(var(--radius) - 4px);
+  padding: 0.375rem 2rem 0.375rem 0.5rem;
+  font-size: 0.875rem;
+  line-height: 1.25rem;
+  outline: none;
+  user-select: none;
+
+  &:focus {
+    background-color: var(--accent);
+    color: var(--accent-foreground);
+  }
+
+  &[data-disabled] {
+    pointer-events: none;
+    opacity: 0.5;
+  }
+
+  & svg {
+    pointer-events: none;
+    flex-shrink: 0;
+  }
+
+  & svg:not([class*='size-']) {
+    width: 1rem;
+    height: 1rem;
+  }
+
+  & svg:not([class*='text-']) {
+    color: var(--muted-foreground);
+  }
+`
+
+const StyledItemIndicatorWrapper = styled.span`
+  position: absolute;
+  right: 0.5rem;
+  display: flex;
+  width: 0.875rem;
+  height: 0.875rem;
+  align-items: center;
+  justify-content: center;
+`
+
+const StyledSelectSeparator = styled(SelectPrimitive.Separator)`
+  background-color: var(--border);
+  pointer-events: none;
+  margin-left: -0.25rem;
+  margin-right: -0.25rem;
+  margin-top: 0.25rem;
+  margin-bottom: 0.25rem;
+  height: 1px;
+`
+
+const StyledScrollButton = styled.div`
+  display: flex;
+  cursor: default;
+  align-items: center;
+  justify-content: center;
+  padding: 0.25rem 0;
+`
 
 function Select({
   ...props
@@ -33,20 +229,17 @@ function SelectTrigger({
   size?: 'sm' | 'default'
 }) {
   return (
-    <SelectPrimitive.Trigger
+    <StyledSelectTrigger
       data-slot="select-trigger"
       data-size={size}
-      className={cn(
-        "border-input data-[placeholder]:text-muted-foreground [&_svg:not([class*='text-'])]:text-muted-foreground focus-visible:border-ring focus-visible:ring-ring/50 aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive dark:bg-input/30 dark:hover:bg-input/50 flex w-fit items-center justify-between gap-2 rounded-md border bg-transparent px-3 py-2 text-sm whitespace-nowrap shadow-xs transition-[color,box-shadow] outline-none focus-visible:ring-[3px] disabled:cursor-not-allowed disabled:opacity-50 data-[size=default]:h-9 data-[size=sm]:h-8 *:data-[slot=select-value]:line-clamp-1 *:data-[slot=select-value]:flex *:data-[slot=select-value]:items-center *:data-[slot=select-value]:gap-2 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
-        className,
-      )}
+      className={className}
       {...props}
     >
       {children}
       <SelectPrimitive.Icon asChild>
-        <ChevronDownIcon className="size-4 opacity-50" />
+        <ChevronDownIcon style={{ width: '1rem', height: '1rem', opacity: 0.5 }} />
       </SelectPrimitive.Icon>
-    </SelectPrimitive.Trigger>
+    </StyledSelectTrigger>
   )
 }
 
@@ -56,31 +249,23 @@ function SelectContent({
   position = 'popper',
   ...props
 }: React.ComponentProps<typeof SelectPrimitive.Content>) {
+  const isPopper = position === 'popper'
+
   return (
     <SelectPrimitive.Portal>
-      <SelectPrimitive.Content
+      <StyledSelectContent
         data-slot="select-content"
-        className={cn(
-          'bg-popover text-popover-foreground data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 relative z-50 max-h-(--radix-select-content-available-height) min-w-[8rem] origin-(--radix-select-content-transform-origin) overflow-x-hidden overflow-y-auto rounded-md border shadow-md',
-          position === 'popper' &&
-            'data-[side=bottom]:translate-y-1 data-[side=left]:-translate-x-1 data-[side=right]:translate-x-1 data-[side=top]:-translate-y-1',
-          className,
-        )}
+        $isPopper={isPopper}
+        className={className}
         position={position}
         {...props}
       >
         <SelectScrollUpButton />
-        <SelectPrimitive.Viewport
-          className={cn(
-            'p-1',
-            position === 'popper' &&
-              'h-[var(--radix-select-trigger-height)] w-full min-w-[var(--radix-select-trigger-width)] scroll-my-1',
-          )}
-        >
+        <StyledSelectViewport $isPopper={isPopper}>
           {children}
-        </SelectPrimitive.Viewport>
+        </StyledSelectViewport>
         <SelectScrollDownButton />
-      </SelectPrimitive.Content>
+      </StyledSelectContent>
     </SelectPrimitive.Portal>
   )
 }
@@ -90,9 +275,9 @@ function SelectLabel({
   ...props
 }: React.ComponentProps<typeof SelectPrimitive.Label>) {
   return (
-    <SelectPrimitive.Label
+    <StyledSelectLabel
       data-slot="select-label"
-      className={cn('text-muted-foreground px-2 py-1.5 text-xs', className)}
+      className={className}
       {...props}
     />
   )
@@ -104,21 +289,18 @@ function SelectItem({
   ...props
 }: React.ComponentProps<typeof SelectPrimitive.Item>) {
   return (
-    <SelectPrimitive.Item
+    <StyledSelectItem
       data-slot="select-item"
-      className={cn(
-        "focus:bg-accent focus:text-accent-foreground [&_svg:not([class*='text-'])]:text-muted-foreground relative flex w-full cursor-default items-center gap-2 rounded-sm py-1.5 pr-8 pl-2 text-sm outline-hidden select-none data-[disabled]:pointer-events-none data-[disabled]:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4 *:[span]:last:flex *:[span]:last:items-center *:[span]:last:gap-2",
-        className,
-      )}
+      className={className}
       {...props}
     >
-      <span className="absolute right-2 flex size-3.5 items-center justify-center">
+      <StyledItemIndicatorWrapper>
         <SelectPrimitive.ItemIndicator>
-          <CheckIcon className="size-4" />
+          <CheckIcon style={{ width: '1rem', height: '1rem' }} />
         </SelectPrimitive.ItemIndicator>
-      </span>
+      </StyledItemIndicatorWrapper>
       <SelectPrimitive.ItemText>{children}</SelectPrimitive.ItemText>
-    </SelectPrimitive.Item>
+    </StyledSelectItem>
   )
 }
 
@@ -127,9 +309,9 @@ function SelectSeparator({
   ...props
 }: React.ComponentProps<typeof SelectPrimitive.Separator>) {
   return (
-    <SelectPrimitive.Separator
+    <StyledSelectSeparator
       data-slot="select-separator"
-      className={cn('bg-border pointer-events-none -mx-1 my-1 h-px', className)}
+      className={className}
       {...props}
     />
   )
@@ -142,13 +324,12 @@ function SelectScrollUpButton({
   return (
     <SelectPrimitive.ScrollUpButton
       data-slot="select-scroll-up-button"
-      className={cn(
-        'flex cursor-default items-center justify-center py-1',
-        className,
-      )}
+      className={className}
       {...props}
     >
-      <ChevronUpIcon className="size-4" />
+      <StyledScrollButton>
+        <ChevronUpIcon style={{ width: '1rem', height: '1rem' }} />
+      </StyledScrollButton>
     </SelectPrimitive.ScrollUpButton>
   )
 }
@@ -160,13 +341,12 @@ function SelectScrollDownButton({
   return (
     <SelectPrimitive.ScrollDownButton
       data-slot="select-scroll-down-button"
-      className={cn(
-        'flex cursor-default items-center justify-center py-1',
-        className,
-      )}
+      className={className}
       {...props}
     >
-      <ChevronDownIcon className="size-4" />
+      <StyledScrollButton>
+        <ChevronDownIcon style={{ width: '1rem', height: '1rem' }} />
+      </StyledScrollButton>
     </SelectPrimitive.ScrollDownButton>
   )
 }

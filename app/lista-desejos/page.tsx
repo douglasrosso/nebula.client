@@ -3,12 +3,292 @@
 import { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
+import styled from "styled-components";
 import { useStore } from "@/lib/store";
 import { useGames } from "@/lib/hooks/useGames";
 import { AuthGuard } from "@/components/auth-guard";
 import { Heart, Trash2, ArrowRight, Check, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { formatPrice } from "@/lib/utils";
+
+/* ─── Styled ─── */
+const MainPage = styled.main`
+  min-height: 100vh;
+  padding-top: 5rem;
+  padding-bottom: 4rem;
+`;
+
+const Container = styled.div`
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 0 1rem;
+  @media (min-width: 1024px) { padding: 0 1.5rem; }
+`;
+
+const EmptyWrapper = styled.div`
+  max-width: 24rem;
+  margin: 0 auto;
+  text-align: center;
+  padding: 5rem 0;
+`;
+
+const EmptyIcon = styled.div`
+  width: 4rem;
+  height: 4rem;
+  border-radius: 1rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 1.25rem;
+  background-color: var(--surface-inset);
+`;
+
+const EmptyTitle = styled.p`
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--foreground);
+  margin: 0 0 0.5rem;
+`;
+
+const EmptySubtitle = styled.p`
+  font-size: 0.9375rem;
+  margin: 0 0 2rem;
+  color: var(--muted-foreground);
+`;
+
+const ExploreLink = styled(Link)`
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.625rem 1.25rem;
+  border-radius: 0.75rem;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  color: var(--primary-foreground);
+  background-color: var(--primary);
+  text-decoration: none;
+  transition: opacity 150ms;
+  &:hover { opacity: 0.8; }
+`;
+
+const HeaderRow = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  margin-bottom: 2rem;
+  @media (min-width: 640px) {
+    flex-direction: row;
+    align-items: flex-end;
+    justify-content: space-between;
+  }
+`;
+
+const HeaderLeft = styled.div``;
+
+const PageTitle = styled.h1`
+  font-size: 1.75rem;
+  font-weight: 700;
+  letter-spacing: -0.025em;
+  color: var(--foreground);
+  margin: 0;
+`;
+
+const PageCount = styled.p`
+  font-size: 0.9375rem;
+  margin: 0.125rem 0 0;
+  color: var(--muted-foreground);
+`;
+
+const StatsRow = styled.div`
+  display: flex;
+  gap: 1.5rem;
+`;
+
+const StatItem = styled.div`
+  text-align: right;
+`;
+
+const StatLabel = styled.p`
+  font-size: 0.6875rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin: 0 0 0.125rem;
+  color: var(--text-tertiary);
+`;
+
+const StatValue = styled.p<{ $color?: string }>`
+  font-size: 1.25rem;
+  font-weight: 700;
+  margin: 0;
+  color: ${({ $color }) => $color || "var(--primary)"};
+`;
+
+const GamesList = styled.div`
+  border-radius: 1rem;
+  overflow: hidden;
+  background-color: var(--surface-base);
+`;
+
+const GameItem = styled.article<{ $notFirst?: boolean }>`
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  padding: 1rem;
+  border-top: ${({ $notFirst }) => $notFirst ? "1px solid var(--border)" : "none"};
+  @media (min-width: 640px) { flex-direction: row; }
+`;
+
+const GameImageLink = styled(Link)`
+  position: relative;
+  display: block;
+  width: 100%;
+  border-radius: 0.75rem;
+  overflow: hidden;
+  flex-shrink: 0;
+  aspect-ratio: 16/9;
+  @media (min-width: 640px) {
+    width: 12rem;
+    aspect-ratio: 460/215;
+  }
+`;
+
+const DiscountBadge = styled.span`
+  position: absolute;
+  top: 0.5rem;
+  left: 0.5rem;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  padding: 0.125rem 0.5rem;
+  border-radius: 0.375rem;
+  background-color: var(--success);
+  color: var(--success-foreground);
+`;
+
+const GameContent = styled.div`
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+`;
+
+const GameTop = styled.div`
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem;
+`;
+
+const GameInfo = styled.div``;
+
+const GameTitleLink = styled(Link)`
+  font-size: 1.0625rem;
+  font-weight: 600;
+  color: var(--foreground);
+  text-decoration: none;
+  transition: opacity 150ms;
+  &:hover { opacity: 0.7; }
+`;
+
+const GameDeveloper = styled.p`
+  font-size: 0.8125rem;
+  margin: 0.125rem 0 0;
+  color: var(--muted-foreground);
+`;
+
+const GenresList = styled.div`
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.375rem;
+  margin-top: 0.5rem;
+`;
+
+const GenreTag = styled.span`
+  font-size: 0.6875rem;
+  padding: 0.125rem 0.5rem;
+  border-radius: 0.375rem;
+  background-color: var(--surface-inset);
+  color: var(--muted-foreground);
+`;
+
+const RemoveButton = styled.button`
+  padding: 0.375rem;
+  border-radius: 0.5rem;
+  transition: all 150ms;
+  flex-shrink: 0;
+  color: var(--text-tertiary);
+  background: none;
+  border: none;
+  cursor: pointer;
+  &:hover { color: var(--destructive); }
+`;
+
+const GameDescription = styled.p`
+  font-size: 0.8125rem;
+  margin: 0.75rem 0 0;
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  display: none;
+  color: var(--muted-foreground);
+  @media (min-width: 1024px) { display: -webkit-box; }
+`;
+
+const GameFooter = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin-top: auto;
+  padding-top: 1rem;
+  @media (min-width: 640px) { flex-direction: row; align-items: center; justify-content: space-between; }
+`;
+
+const PriceGroup = styled.div`
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+`;
+
+const OriginalPrice = styled.span`
+  font-size: 0.8125rem;
+  text-decoration: line-through;
+  color: var(--text-tertiary);
+`;
+
+const CurrentPrice = styled.span<{ $free?: boolean }>`
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: ${({ $free }) => $free ? "var(--success)" : "var(--primary)"};
+`;
+
+const LibraryBadge = styled.span`
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.625rem 1.25rem;
+  border-radius: 0.75rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  background-color: var(--surface-inset);
+  color: var(--muted-foreground);
+`;
+
+const BuyButton = styled.button`
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.625rem 1.25rem;
+  border-radius: 0.75rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  transition: opacity 150ms;
+  background-color: var(--primary);
+  color: var(--primary-foreground);
+  border: none;
+  cursor: pointer;
+  &:disabled { opacity: 0.6; cursor: not-allowed; }
+  &:hover:not(:disabled) { opacity: 0.8; }
+`;
 
 export default function WishlistPage() {
   const { wishlist, removeFromWishlist, apiGames, purchase, isInLibrary } = useStore();
@@ -34,134 +314,99 @@ export default function WishlistPage() {
 
   return (
     <AuthGuard>
-      <main id="main-content" className="min-h-screen pt-20 pb-16">
-        <div className="container mx-auto px-4 lg:px-6">
-
+      <MainPage id="main-content">
+        <Container>
           {wishlistGames.length === 0 ? (
-            <div className="max-w-sm mx-auto text-center py-20">
-              <div className="w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-5 bg-surface-inset">
-                <Heart className="w-8 h-8 text-muted-foreground" />
-              </div>
-              <p className="text-[20px] font-bold text-foreground mb-2">Lista de desejos vazia</p>
-              <p className="text-[15px] mb-8 text-muted-foreground">
-                Adicione jogos à sua lista para acompanhar promoções e lançamentos.
-              </p>
-              <Link
-                href="/loja"
-                className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-[15px] font-semibold text-primary-foreground bg-primary transition-opacity hover:opacity-80"
-              >
-                Explorar loja <ArrowRight className="w-4 h-4" />
-              </Link>
-            </div>
+            <EmptyWrapper>
+              <EmptyIcon><Heart style={{ width: "2rem", height: "2rem", color: "var(--muted-foreground)" }} /></EmptyIcon>
+              <EmptyTitle>Lista de desejos vazia</EmptyTitle>
+              <EmptySubtitle>Adicione jogos à sua lista para acompanhar promoções e lançamentos.</EmptySubtitle>
+              <ExploreLink href="/loja">
+                Explorar loja <ArrowRight style={{ width: "1rem", height: "1rem" }} />
+              </ExploreLink>
+            </EmptyWrapper>
           ) : (
             <>
-              <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4 mb-8">
-                <div>
-                  <h1 className="text-[28px] font-bold tracking-tight text-foreground">Lista de Desejos</h1>
-                  <p className="text-[15px] mt-0.5 text-muted-foreground">
-                    {wishlistGames.length} {wishlistGames.length === 1 ? "jogo" : "jogos"} salvos
-                  </p>
-                </div>
-                <div className="flex gap-6">
-                  <div className="text-right">
-                    <p className="text-[11px] font-semibold uppercase tracking-wider mb-0.5 text-text-tertiary">Valor total</p>
-                    <p className="text-[20px] font-bold text-primary">{formatPrice(totalValue)}</p>
-                  </div>
+              <HeaderRow>
+                <HeaderLeft>
+                  <PageTitle>Lista de Desejos</PageTitle>
+                  <PageCount>{wishlistGames.length} {wishlistGames.length === 1 ? "jogo" : "jogos"} salvos</PageCount>
+                </HeaderLeft>
+                <StatsRow>
+                  <StatItem>
+                    <StatLabel>Valor total</StatLabel>
+                    <StatValue>{formatPrice(totalValue)}</StatValue>
+                  </StatItem>
                   {totalSavings > 0 && (
-                    <div className="text-right">
-                      <p className="text-[11px] font-semibold uppercase tracking-wider mb-0.5 text-text-tertiary">Economia</p>
-                      <p className="text-[20px] font-bold text-success">{formatPrice(totalSavings)}</p>
-                    </div>
+                    <StatItem>
+                      <StatLabel>Economia</StatLabel>
+                      <StatValue $color="var(--success)">{formatPrice(totalSavings)}</StatValue>
+                    </StatItem>
                   )}
-                </div>
-              </div>
+                </StatsRow>
+              </HeaderRow>
 
-              <div className="rounded-2xl overflow-hidden bg-surface-base">
+              <GamesList>
                 {wishlistGames.map((game, i) => {
                   const owned = isInLibrary(game.id);
                   const buying = buyingId === game.id;
                   return (
-                    <article
-                      key={game.id}
-                      className={`flex flex-col sm:flex-row gap-4 p-4 ${i > 0 ? "border-t border-border" : ""}`}
-                    >
-                      <Link href={`/jogo/${game.id}`} className="relative w-full sm:w-48 aspect-video sm:aspect-[460/215] rounded-xl overflow-hidden flex-shrink-0 group">
+                    <GameItem key={game.id} $notFirst={i > 0}>
+                      <GameImageLink href={`/jogo/${game.id}`}>
                         <Image
-                          src={game.coverImage}
-                          alt={game.title}
-                          fill
-                          className="object-cover transition-transform duration-300 group-hover:scale-[1.04]"
+                          src={game.coverImage} alt={game.title} fill
+                          style={{ objectFit: "cover", transition: "transform 300ms" }}
                           sizes="(max-width: 640px) 100vw, 192px"
                         />
                         {game.discount && (
-                          <span className="absolute top-2 left-2 text-[11px] font-bold px-2 py-0.5 rounded-md bg-success text-success-foreground">
-                            -{game.discount}%
-                          </span>
+                          <DiscountBadge>-{game.discount}%</DiscountBadge>
                         )}
-                      </Link>
+                      </GameImageLink>
 
-                      <div className="flex-1 flex flex-col">
-                        <div className="flex items-start justify-between gap-3">
-                          <div>
-                            <Link href={`/jogo/${game.id}`} className="text-[17px] font-semibold text-foreground hover:opacity-70 transition-opacity">
-                              {game.title}
-                            </Link>
-                            <p className="text-[13px] mt-0.5 text-muted-foreground">{game.developer}</p>
-                            <div className="flex flex-wrap gap-1.5 mt-2">
+                      <GameContent>
+                        <GameTop>
+                          <GameInfo>
+                            <GameTitleLink href={`/jogo/${game.id}`}>{game.title}</GameTitleLink>
+                            <GameDeveloper>{game.developer}</GameDeveloper>
+                            <GenresList>
                               {game.genres.slice(0, 3).map((genre) => (
-                                <span key={genre} className="text-[11px] px-2 py-0.5 rounded-md bg-surface-inset text-muted-foreground">
-                                  {genre}
-                                </span>
+                                <GenreTag key={genre}>{genre}</GenreTag>
                               ))}
-                            </div>
-                          </div>
-                          <button
-                            onClick={() => removeFromWishlist(game.id)}
-                            className="p-1.5 rounded-lg transition-colors flex-shrink-0 text-text-tertiary hover:text-destructive"
-                            aria-label={`Remover ${game.title}`}
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </button>
-                        </div>
+                            </GenresList>
+                          </GameInfo>
+                          <RemoveButton onClick={() => removeFromWishlist(game.id)} aria-label={`Remover ${game.title}`}>
+                            <Trash2 style={{ width: "1rem", height: "1rem" }} />
+                          </RemoveButton>
+                        </GameTop>
 
-                        <p className="text-[13px] mt-3 line-clamp-2 hidden lg:block text-muted-foreground">
-                          {game.description}
-                        </p>
+                        <GameDescription>{game.description}</GameDescription>
 
-                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mt-auto pt-4">
-                          <div className="flex items-baseline gap-2">
+                        <GameFooter>
+                          <PriceGroup>
                             {game.originalPrice && (
-                              <span className="text-[13px] line-through text-text-tertiary">
-                                {formatPrice(game.originalPrice)}
-                              </span>
+                              <OriginalPrice>{formatPrice(game.originalPrice)}</OriginalPrice>
                             )}
-                            <span className={`text-[20px] font-bold ${game.price === 0 ? "text-success" : "text-primary"}`}>
-                              {formatPrice(game.price)}
-                            </span>
-                          </div>
+                            <CurrentPrice $free={game.price === 0}>{formatPrice(game.price)}</CurrentPrice>
+                          </PriceGroup>
                           {owned ? (
-                            <span className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-[14px] font-semibold bg-surface-inset text-muted-foreground">
-                              <Check className="w-4 h-4" /> Na biblioteca
-                            </span>
+                            <LibraryBadge>
+                              <Check style={{ width: "1rem", height: "1rem" }} /> Na biblioteca
+                            </LibraryBadge>
                           ) : (
-                            <button
-                              onClick={() => handleBuy(game)}
-                              disabled={buying}
-                              className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-[14px] font-semibold transition-opacity disabled:opacity-60 bg-primary text-primary-foreground hover:opacity-80"
-                            >
-                              {buying ? <Loader2 className="w-4 h-4 animate-spin" /> : "Comprar"}
-                            </button>
+                            <BuyButton onClick={() => handleBuy(game)} disabled={buying}>
+                              {buying ? <Loader2 style={{ width: "1rem", height: "1rem", animation: "spin 1s linear infinite" }} /> : "Comprar"}
+                            </BuyButton>
                           )}
-                        </div>
-                      </div>
-                    </article>
+                        </GameFooter>
+                      </GameContent>
+                    </GameItem>
                   );
                 })}
-              </div>
+              </GamesList>
             </>
           )}
-        </div>
-      </main>
+        </Container>
+      </MainPage>
     </AuthGuard>
   );
 }
