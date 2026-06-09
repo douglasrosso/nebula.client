@@ -13,6 +13,16 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { formatPrice } from "@/lib/utils";
+import { resolveGameCover, resolveGameScreenshots } from "@/lib/image-map";
+
+function formatDate(dateStr: string): string {
+  if (!dateStr) return dateStr;
+  try {
+    return new Date(dateStr).toLocaleDateString("pt-BR", { day: "numeric", month: "long", year: "numeric" });
+  } catch {
+    return dateStr;
+  }
+}
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -105,12 +115,14 @@ const NavButton = styled.button`
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: opacity 150ms;
+  opacity: 0;
+  transition: opacity 200ms;
   background: oklch(0 0 0 / 0.7);
   backdrop-filter: blur(12px);
   border: none;
   cursor: pointer;
-  &:hover { opacity: 0.8; }
+  ${ScreenshotWrapper}:hover & { opacity: 1; }
+  &:hover { opacity: 0.7 !important; }
 `;
 
 const PrevButton = styled(NavButton)`
@@ -475,7 +487,7 @@ export default function GameDetailPage({ params }: PageProps) {
   if (loading) {
     return (
       <LoadingPage>
-        <Loader2 style={{ width: "2rem", height: "2rem", animation: "spin 1s linear infinite", color: "var(--primary)" }} />
+        <Loader2 className="animate-spin" style={{ width: "2rem", height: "2rem", color: "var(--primary)" }} />
       </LoadingPage>
     );
   }
@@ -496,7 +508,7 @@ export default function GameDetailPage({ params }: PageProps) {
   const relatedGames = apiGames
     .filter((g) => g.id !== game.id && g.genres.some((genre) => game.genres.includes(genre)))
     .slice(0, 4);
-  const screenshots = game.screenshots.length > 0 ? game.screenshots : [game.coverImage];
+  const screenshots = resolveGameScreenshots(game.screenshots, game.coverImage);
 
   async function handleBuy() {
     if (!requireLogin()) return;
@@ -648,7 +660,9 @@ export default function GameDetailPage({ params }: PageProps) {
                 ) : (
                   <PrimaryButton onClick={handleBuy} disabled={buying}>
                     {buying
-                      ? <Loader2 style={{ width: "1rem", height: "1rem", animation: "spin 1s linear infinite" }} />
+                      ? <Loader2 className="animate-spin" style={{ width: "1rem", height: "1rem" }} />
+                      : game.price === 0
+                      ? <><Play style={{ width: "1rem", height: "1rem" }} /> Obter</>
                       : <><Check style={{ width: "1rem", height: "1rem" }} /> Comprar agora</>
                     }
                   </PrimaryButton>
@@ -668,7 +682,7 @@ export default function GameDetailPage({ params }: PageProps) {
                 {[
                   { icon: Building, label: "Desenvolvedor", value: game.developer },
                   { icon: Tag, label: "Publicador", value: game.publisher },
-                  { icon: Calendar, label: "Lançamento", value: game.releaseDate },
+                  { icon: Calendar, label: "Lançamento", value: formatDate(game.releaseDate) },
                 ].map(({ icon: Icon, label, value }) => (
                   <MetaItem key={label}>
                     <MetaIcon><Icon style={{ width: "1rem", height: "1rem" }} /></MetaIcon>

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, Suspense } from "react";
+import { useState, useEffect, useRef, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import styled from "styled-components";
 import { useStore } from "@/lib/store";
@@ -317,30 +317,29 @@ const LoadingSpinner = styled.span`
   gap: 0.5rem;
 `;
 
-/* ─── Store Content ─── */
-function StoreContent() {
-  const searchParams = useSearchParams();
-  const { searchQuery, setSearchQuery, selectedGenres, setSelectedGenres, priceRange, setPriceRange, sortBy, setSortBy, getFilteredGames } = useStore();
-  const [localSearch, setLocalSearch] = useState(searchQuery);
-  const [apiGenres, setApiGenres] = useState<string[]>(DEFAULT_GENRES);
-  const { loading } = useGames({ pageSize: 200 });
-  const filteredGames = getFilteredGames();
+/* ─── FiltersContent — extracted to prevent remount on every render ─── */
+type SortValue = typeof SORT_OPTIONS[number]["value"];
 
-  useEffect(() => {
-    const genre = searchParams.get("genre");
-    if (genre && !selectedGenres.includes(genre)) setSelectedGenres([genre]);
-  }, []);
+interface FiltersContentProps {
+  sortBy: SortValue;
+  setSortBy: (v: SortValue) => void;
+  localPriceRange: [number, number];
+  onSliderChange: (v: [number, number]) => void;
+  committedPriceRange: [number, number];
+  apiGenres: string[];
+  selectedGenres: string[];
+  toggleGenre: (g: string) => void;
+  hasActiveFilters: boolean;
+  clearFilters: () => void;
+}
 
-  useEffect(() => {
-    gamesApi.genres().then((gs) => { if (gs.length > 0) setApiGenres(gs.map((g) => g.name)); }).catch(() => {});
-  }, []);
-
-  const handleSearch = (e: React.SyntheticEvent<HTMLFormElement>) => { e.preventDefault(); setSearchQuery(localSearch); };
-  const toggleGenre = (genre: string) => setSelectedGenres(selectedGenres.includes(genre) ? selectedGenres.filter((g) => g !== genre) : [...selectedGenres, genre]);
-  const clearFilters = () => { setSearchQuery(""); setLocalSearch(""); setSelectedGenres([]); setPriceRange([0, 500]); setSortBy("relevance"); };
-  const hasActiveFilters = searchQuery !== "" || selectedGenres.length > 0 || priceRange[0] > 0 || priceRange[1] < 500;
-
-  const FiltersContent = () => (
+function FiltersContent({
+  sortBy, setSortBy,
+  localPriceRange, onSliderChange, committedPriceRange,
+  apiGenres, selectedGenres, toggleGenre,
+  hasActiveFilters, clearFilters,
+}: FiltersContentProps) {
+  return (
     <FiltersSection>
       <div>
         <FilterGroupLabel>Ordenar</FilterGroupLabel>
@@ -348,7 +347,7 @@ function StoreContent() {
           {SORT_OPTIONS.map((opt) => (
             <SortOption
               key={opt.value}
-              onClick={() => setSortBy(opt.value as typeof sortBy)}
+              onClick={() => setSortBy(opt.value)}
               $active={sortBy === opt.value}
             >
               {opt.label}
@@ -360,9 +359,16 @@ function StoreContent() {
 
       <div>
         <FilterGroupLabel>Faixa de Preço</FilterGroupLabel>
-        <Slider value={priceRange} onValueChange={(v) => setPriceRange(v as [number, number])} max={500} step={10} style={{ marginBottom: "0.75rem" }} />
+        <Slider
+          value={localPriceRange}
+          onValueChange={(v) => onSliderChange(v as [number, number])}
+          max={500}
+          step={10}
+          style={{ marginBottom: "0.75rem" }}
+        />
         <PriceRange>
-          <span>R$ {priceRange[0]}</span><span>R$ {priceRange[1]}</span>
+          <span>R$ {localPriceRange[0]}</span>
+          <span>R$ {localPriceRange[1]}</span>
         </PriceRange>
       </div>
 
@@ -386,6 +392,69 @@ function StoreContent() {
       )}
     </FiltersSection>
   );
+}
+
+/* ─── Store Content ─── */
+function StoreContent() {
+  const searchParams = useSearchParams();
+  const {
+    searchQuery, setSearchQuery,
+    selectedGenres, setSelectedGenres,
+    priceRange, setPriceRange,
+    sortBy, setSortBy,
+    getFilteredGames,
+  } = useStore();
+
+  const [localSearch, setLocalSearch] = useState(searchQuery);
+  const [localPriceRange, setLocalPriceRange] = useState<[number, number]>(priceRange);
+  const [apiGenres, setApiGenres] = useState<string[]>(DEFAULT_GENRES);
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const { loading } = useGames({ pageSize: 200 });
+  const filteredGames = getFilteredGames();
+
+  // Sync local slider when store resets (e.g. clearFilters)
+  useEffect(() => {
+    setLocalPriceRange(priceRange);
+  }, [priceRange[0], priceRange[1]]);
+
+  useEffect(() => {
+    const genre = searchParams.get("genre");
+    if (genre && !selectedGenres.includes(genre)) setSelectedGenres([genre]);
+  }, []);
+
+  useEffect(() => {
+    gamesApi.genres().then((gs) => { if (gs.length > 0) setApiGenres(gs.map((g) => g.name)); }).catch(() => {});
+  }, []);
+
+  const handleSliderChange = (v: [number, number]) => {
+    setLocalPriceRange(v);
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => setPriceRange(v), 300);
+  };
+
+  const handleSearch = (e: React.SyntheticEvent<HTMLFormElement>) => { e.preventDefault(); setSearchQuery(localSearch); };
+  const toggleGenre = (genre: string) => setSelectedGenres(selectedGenres.includes(genre) ? selectedGenres.filter((g) => g !== genre) : [...selectedGenres, genre]);
+  const clearFilters = () => {
+    setSearchQuery("");
+    setLocalSearch("");
+    setSelectedGenres([]);
+    setPriceRange([0, 500]);
+    setSortBy("relevance");
+  };
+  const hasActiveFilters = searchQuery !== "" || selectedGenres.length > 0 || priceRange[0] > 0 || priceRange[1] < 500;
+
+  const filtersProps: FiltersContentProps = {
+    sortBy: sortBy as SortValue,
+    setSortBy: setSortBy as (v: SortValue) => void,
+    localPriceRange,
+    onSliderChange: handleSliderChange,
+    committedPriceRange: priceRange,
+    apiGenres,
+    selectedGenres,
+    toggleGenre,
+    hasActiveFilters,
+    clearFilters,
+  };
 
   return (
     <MainPage id="main-content">
@@ -419,7 +488,9 @@ function StoreContent() {
               <SheetHeader>
                 <SheetTitle style={{ fontSize: "1.0625rem", fontWeight: 700, color: "var(--foreground)" }}>Filtros</SheetTitle>
               </SheetHeader>
-              <div style={{ marginTop: "1.5rem" }}><FiltersContent /></div>
+              <div style={{ marginTop: "1.5rem" }}>
+                <FiltersContent {...filtersProps} />
+              </div>
             </SheetContent>
           </Sheet>
         </SearchRow>
@@ -443,7 +514,7 @@ function StoreContent() {
           <Sidebar>
             <SidebarInner>
               <SidebarTitle>Filtros</SidebarTitle>
-              <FiltersContent />
+              <FiltersContent {...filtersProps} />
             </SidebarInner>
           </Sidebar>
 

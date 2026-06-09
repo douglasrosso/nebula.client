@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { gamesApi } from "@/lib/api";
 import { useStore } from "@/lib/store";
-import type { ApiGame, GameQuery, PaginatedResult } from "@/lib/types";
+import type { ApiGame, ApiGameDetail, GameQuery, PaginatedResult } from "@/lib/types";
 
 export function useGames(query: GameQuery = {}) {
   const { setApiGames } = useStore();
@@ -36,7 +36,7 @@ export function useGames(query: GameQuery = {}) {
 }
 
 export function useGame(id: string) {
-  const [game, setGame] = useState<ApiGame | null>(null);
+  const [game, setGame] = useState<ApiGameDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 

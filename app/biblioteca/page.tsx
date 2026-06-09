@@ -8,6 +8,7 @@ import { useStore } from "@/lib/store";
 import { useGames } from "@/lib/hooks/useGames";
 import { AuthGuard } from "@/components/auth-guard";
 import { Library, Search, Play, Grid3X3, List } from "lucide-react";
+import { resolveGameCover } from "@/lib/image-map";
 
 function formatPrice(price: number) {
   if (price === 0) return "Gratuito";
@@ -170,6 +171,13 @@ const GridCard = styled(Link)`
 const GridImageWrapper = styled.div`
   position: relative;
   aspect-ratio: 460/215;
+  overflow: hidden;
+  img {
+    transition: transform 500ms cubic-bezier(0.4, 0, 0.2, 1) !important;
+  }
+  ${GridCard}:hover & img {
+    transform: scale(1.05);
+  }
 `;
 
 const GridOverlay = styled.div`
@@ -415,7 +423,7 @@ export default function LibraryPage() {
               {libraryGames.map((game) => (
                 <GridCard key={game.id} href={`/jogo/${game.id}`}>
                   <GridImageWrapper>
-                    <Image src={game.coverImage} alt={game.title} fill style={{ objectFit: "cover", transition: "transform 500ms" }} sizes="(max-width: 640px) 50vw, (max-width: 768px) 33vw, 20vw" />
+                    <Image src={resolveGameCover(game.coverImage)} alt={game.title} fill style={{ objectFit: "cover" }} sizes="(max-width: 640px) 50vw, (max-width: 768px) 33vw, 20vw" />
                     <GridOverlay>
                       <PlayBadge><Play style={{ width: "0.875rem", height: "0.875rem" }} /> Jogar</PlayBadge>
                     </GridOverlay>
@@ -432,7 +440,7 @@ export default function LibraryPage() {
               {libraryGames.map((game, i) => (
                 <ListItem key={game.id} href={`/jogo/${game.id}`} $notFirst={i > 0}>
                   <ListImageWrapper>
-                    <Image src={game.coverImage} alt={game.title} fill style={{ objectFit: "cover" }} sizes="80px" />
+                    <Image src={resolveGameCover(game.coverImage)} alt={game.title} fill style={{ objectFit: "cover" }} sizes="80px" />
                   </ListImageWrapper>
                   <ListInfo>
                     <ListTitle>{game.title}</ListTitle>
@@ -454,7 +462,7 @@ export default function LibraryPage() {
                 {wishlistGames.slice(0, 3).map((game) => (
                   <WishlistCard key={game.id} href={`/jogo/${game.id}`}>
                     <WishlistImageWrapper>
-                      <Image src={game.coverImage} alt={game.title} fill style={{ objectFit: "cover" }} sizes="96px" />
+                      <Image src={resolveGameCover(game.coverImage)} alt={game.title} fill style={{ objectFit: "cover" }} sizes="96px" />
                     </WishlistImageWrapper>
                     <WishlistInfo>
                       <WishlistTitle>{game.title}</WishlistTitle>

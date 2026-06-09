@@ -6,6 +6,7 @@ import { Play, Loader2 } from "lucide-react";
 import styled from "styled-components";
 import { type Game, useStore } from "@/lib/store";
 import { formatPrice } from "@/lib/utils";
+import { resolveGameCover } from "@/lib/image-map";
 import { useState } from "react";
 import { toast } from "sonner";
 
@@ -28,6 +29,12 @@ const FeaturedImageWrapper = styled.div`
   position: relative;
   aspect-ratio: 16/9;
   overflow: hidden;
+  img {
+    transition: transform 700ms cubic-bezier(0.4, 0, 0.2, 1) !important;
+  }
+  ${FeaturedLink}:hover & img {
+    transform: scale(1.04);
+  }
 `;
 
 const FeaturedGradient = styled.div`
@@ -151,6 +158,9 @@ const DefaultImageWrapper = styled.div`
   position: relative;
   aspect-ratio: 460/215;
   overflow: hidden;
+  img {
+    transition: transform 500ms cubic-bezier(0.4, 0, 0.2, 1) !important;
+  }
 `;
 
 const DefaultDiscount = styled.span`
@@ -258,13 +268,15 @@ export function GameCard({ game, variant = "default" }: GameCardProps) {
     }
   };
 
+  const coverSrc = resolveGameCover(game.coverImage);
+
   if (variant === "featured") {
     return (
       <FeaturedLink href={`/jogo/${game.id}`}>
         <FeaturedImageWrapper>
           <Image
-            src={game.coverImage} alt={game.title} fill
-            style={{ objectFit: "cover", transition: "transform 700ms" }}
+            src={coverSrc} alt={game.title} fill
+            style={{ objectFit: "cover" }}
             sizes="(max-width: 768px) 100vw, 50vw"
           />
           <FeaturedGradient />
@@ -294,7 +306,7 @@ export function GameCard({ game, variant = "default" }: GameCardProps) {
     return (
       <CompactLink href={`/jogo/${game.id}`}>
         <CompactImageWrapper>
-          <Image src={game.coverImage} alt={game.title} fill style={{ objectFit: "cover" }} sizes="80px" />
+          <Image src={coverSrc} alt={game.title} fill style={{ objectFit: "cover" }} sizes="80px" />
         </CompactImageWrapper>
         <CompactInfo>
           <CompactTitle>{game.title}</CompactTitle>
@@ -308,8 +320,8 @@ export function GameCard({ game, variant = "default" }: GameCardProps) {
     <DefaultLink href={`/jogo/${game.id}`}>
       <DefaultImageWrapper>
         <Image
-          src={game.coverImage} alt={game.title} fill
-          style={{ objectFit: "cover", transition: "transform 500ms" }}
+          src={coverSrc} alt={game.title} fill
+          style={{ objectFit: "cover" }}
           sizes="(max-width: 640px) 100vw, (max-width: 768px) 50vw, (max-width: 1024px) 33vw, 25vw"
         />
         {game.discount && (
@@ -342,7 +354,7 @@ export function GameCard({ game, variant = "default" }: GameCardProps) {
             {inLibrary
               ? <Play style={{ width: "0.75rem", height: "0.75rem" }} />
               : buying
-              ? <Loader2 style={{ width: "0.75rem", height: "0.75rem", animation: "spin 1s linear infinite" }} />
+              ? <Loader2 className="animate-spin" style={{ width: "0.75rem", height: "0.75rem" }} />
               : game.price === 0
               ? "Obter"
               : "Comprar"}

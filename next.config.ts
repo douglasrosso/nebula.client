@@ -5,7 +5,9 @@ const nextConfig: NextConfig = {
     styledComponents: true,
   },
   images: {
-    remotePatterns: [
+    dangerouslyAllowSVG: true,
+    contentSecurityPolicy: "default-src 'self'; script-src 'none'; sandbox;",
+        remotePatterns: [
       {
         protocol: "https",
         hostname: "cdn.cloudflare.steamstatic.com",

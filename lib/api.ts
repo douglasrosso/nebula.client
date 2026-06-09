@@ -1,5 +1,6 @@
 import type {
   ApiGame,
+  ApiGameDetail,
   ApiUser,
   ApiWishlistItem,
   ApiLibraryItem,
@@ -77,7 +78,7 @@ export const gamesApi = {
     return request<PaginatedResult<ApiGame>>(`/api/games${qs ? `?${qs}` : ""}`);
   },
 
-  getById: (id: string) => request<ApiGame>(`/api/games/${id}`),
+  getById: (id: string) => request<ApiGameDetail>(`/api/games/${id}`),
 
   genres: () => request<ApiGenre[]>("/api/games/genres"),
 };

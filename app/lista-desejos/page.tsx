@@ -10,6 +10,7 @@ import { AuthGuard } from "@/components/auth-guard";
 import { Heart, Trash2, ArrowRight, Check, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { formatPrice } from "@/lib/utils";
+import { resolveGameCover } from "@/lib/image-map";
 
 /* ─── Styled ─── */
 const MainPage = styled.main`
@@ -150,6 +151,12 @@ const GameImageLink = styled(Link)`
   @media (min-width: 640px) {
     width: 12rem;
     aspect-ratio: 460/215;
+  }
+  img {
+    transition: transform 400ms cubic-bezier(0.4, 0, 0.2, 1) !important;
+  }
+  &:hover img {
+    transform: scale(1.05);
   }
 `;
 
@@ -354,8 +361,8 @@ export default function WishlistPage() {
                     <GameItem key={game.id} $notFirst={i > 0}>
                       <GameImageLink href={`/jogo/${game.id}`}>
                         <Image
-                          src={game.coverImage} alt={game.title} fill
-                          style={{ objectFit: "cover", transition: "transform 300ms" }}
+                          src={resolveGameCover(game.coverImage)} alt={game.title} fill
+                          style={{ objectFit: "cover" }}
                           sizes="(max-width: 640px) 100vw, 192px"
                         />
                         {game.discount && (
@@ -394,7 +401,7 @@ export default function WishlistPage() {
                             </LibraryBadge>
                           ) : (
                             <BuyButton onClick={() => handleBuy(game)} disabled={buying}>
-                              {buying ? <Loader2 style={{ width: "1rem", height: "1rem", animation: "spin 1s linear infinite" }} /> : "Comprar"}
+                              {buying ? <Loader2 className="animate-spin" style={{ width: "1rem", height: "1rem" }} /> : "Comprar"}
                             </BuyButton>
                           )}
                         </GameFooter>

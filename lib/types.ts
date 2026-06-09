@@ -4,6 +4,20 @@ export interface ApiGame {
   id: string;
   title: string;
   description: string;
+  price: number;
+  originalPrice?: number;
+  discount?: number;
+  coverImage: string;
+  developer: string;
+  genres: string[];
+  rating: number;
+  positivePercentage: number;
+}
+
+export interface ApiGameDetail {
+  id: string;
+  title: string;
+  description: string;
   longDescription: string;
   price: number;
   originalPrice?: number;
@@ -69,24 +83,10 @@ export interface ApiCartItem {
 
 export interface ApiWishlistItem {
   gameId: string;
-  title: string;
-  coverImage: string;
-  price: number;
-  originalPrice?: number;
-  discount?: number;
-  rating: number;
-  positivePercentage: number;
-  addedAt: string;
 }
 
 export interface ApiLibraryItem {
   gameId: string;
-  title: string;
-  coverImage: string;
-  developer: string;
-  genres: string[];
-  rating: number;
-  acquiredAt: string;
 }
 
 export interface ApiOrder {
